@@ -6,8 +6,11 @@ Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks)
 
 ## Install
 
-Download git-hooks binary of your plantform and place it in your `PATH`
+[Download](https://github.com/git-hooks/git-hooks/releases) binary and place it in your `PATH`
 
+Or manually:
+
+  go get github.com/git-hooks/git-hooks
 
 ## Usage
 
