@@ -65,7 +65,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "git-hooks"
 	app.Usage = "tool to manage project, user, and global Git hooks"
-	app.Version = "0.1.0"
+	app.Version = "0.1.1"
 	app.Action = Bind(List)
 	app.Commands = []cli.Command{
 		{
@@ -108,12 +108,10 @@ func List() {
 	} else {
 		preCommitHook := filepath.Join(root, ".git/hooks/pre-commit")
 		hook, err := ioutil.ReadFile(preCommitHook)
-		if err == nil {
-			if !strings.EqualFold(string(hook), tplPostInstall) {
-				logger.Infoln("Git hooks are NOT installed in this repository. (Run 'git hooks install' to install it)")
-			} else {
-				logger.Infoln("Git hooks ARE installed in this repository.")
-			}
+		if err == nil && strings.EqualFold(string(hook), tplPostInstall) {
+			logger.Infoln("Git hooks ARE installed in this repository.")
+		} else {
+			logger.Infoln("Git hooks are NOT installed in this repository. (Run 'git hooks install' to install it)")
 		}
 	}
 
@@ -139,17 +137,17 @@ func Install(isInstall bool) {
 	}
 
 	if isInstall {
-		_, err := os.Stat(filepath.Join(dirPath, "hooks.old"))
-		if err == nil {
-			logger.Errorln("@rCurrent directory is not a git repo")
+		isExist, _ := Exists(filepath.Join(dirPath, "hooks.old"))
+		if isExist {
+			logger.Errorln("@rhooks.old already exists, perhaps you already installed?")
 		}
 		InstallInto(dirPath, tplPostInstall)
 	} else {
 		isExist, _ := Exists(filepath.Join(dirPath, "hooks.old"))
-		if isExist {
+		if !isExist {
 			logger.Errorln("Error, hooks.old doesn't exists, aborting uninstall to not destroy something")
 		}
-		os.Remove(filepath.Join(dirPath, "hooks"))
+		os.RemoveAll(filepath.Join(dirPath, "hooks"))
 		os.Rename(filepath.Join(dirPath, "hooks.old"), filepath.Join(dirPath, "hooks"))
 		logger.Infoln("Restore hooks.old")
 	}
@@ -234,6 +232,7 @@ func ListHooksInDir(dirname string) (hooks map[string][]string, err error) {
 func InstallInto(dir string, template string) {
 	// backup
 	os.Rename(filepath.Join(dir, "hooks"), filepath.Join(dir, "hooks.old"))
+	os.Mkdir(filepath.Join(dir, "hooks"), 0755)
 	for _, hook := range TRIGGERS {
 		fmt.Println("Install ", hook)
 		f, _ := os.Create(filepath.Join(dir, "hooks", hook))
