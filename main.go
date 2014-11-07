@@ -65,7 +65,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "git-hooks"
 	app.Usage = "tool to manage project, user, and global Git hooks"
-	app.Version = "0.1.1"
+	app.Version = "0.2.0"
 	app.Action = Bind(List)
 	app.Commands = []cli.Command{
 		{
@@ -190,7 +190,7 @@ func Run(cmds ...string) {
 		hooks, err := ListHooksInDir(dir)
 		if err == nil {
 			for trigger := range hooks {
-				if trigger == t {
+				if trigger == t || trigger == ("_"+t) {
 					for _, hook := range hooks[trigger] {
 						debug("Execute hook %s", hook)
 						cmd := exec.Command(filepath.Join(dir, trigger, hook), args...)
@@ -198,7 +198,7 @@ func Run(cmds ...string) {
 						if err != nil {
 							logger.Errorln(string(out), err.Error())
 						} else {
-							fmt.Println(string(out))
+							fmt.Print(string(out))
 						}
 					}
 				}
