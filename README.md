@@ -10,7 +10,7 @@ Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks)
 
 Or manually:
 
-  go get github.com/git-hooks/git-hooks
+    go get github.com/git-hooks/git-hooks
 
 ## Usage
 
