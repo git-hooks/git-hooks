@@ -211,6 +211,7 @@ func Run(cmds ...string) {
 			config, err := ListHooksInDir(dir)
 			if err == nil {
 				for trigger, hooks := range config {
+					// semi scope
 					if trigger == t || trigger == ("_"+t) {
 						for _, hook := range hooks {
 							debug("Execute hook %s", hook)
@@ -319,6 +320,7 @@ func InstallInto(dir string, template string) {
 func HookDirs() map[string]string {
 	dirs := make(map[string]string)
 
+	// project scope
 	root, err := GetGitRepoRoot()
 	if err == nil {
 		path := filepath.Join(root, "githooks")
@@ -328,6 +330,7 @@ func HookDirs() map[string]string {
 		}
 	}
 
+	// user scope
 	home, err := homedir.Dir()
 	if err == nil {
 		path := filepath.Join(home, ".githooks")
@@ -337,6 +340,7 @@ func HookDirs() map[string]string {
 		}
 	}
 
+	// global scope
 	global, err := GitExec("config --get --global hooks.global")
 	if err == nil {
 		path := global
