@@ -16,13 +16,5 @@ Or manually:
 
 See [Get Started](https://github.com/git-hooks/git-hooks/wiki/Get-Started)
 
-## How it works
-
-When you invoke `git hooks install`, it replace all the hooks under .git/hooks with
-
-    #!/usr/bin/env bash
-    git-hooks run "$0" "$@"
-
-Hook execution will be routed with `git-hooks`
 
 Fow more info, see [wiki](https://github.com/git-hooks/git-hooks/wiki)
