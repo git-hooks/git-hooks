@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.4.1"
+var VERSION = "v0.4.2"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -256,7 +256,21 @@ func Update() {
 					logger.Errorln(err.Error())
 				}
 
-				os.Rename(file.Name(), name)
+				debug("Replace %s with temp file %s", name, file.Name())
+				out, err := os.Create(name)
+				if err != nil {
+					logger.Errorln("Create error " + err.Error())
+				}
+				defer out.Close()
+				in, err := os.Open(file.Name())
+				if err != nil {
+					logger.Errorln("Open error " + err.Error())
+				}
+				defer in.Close()
+				_, err = io.Copy(out, in)
+				if err != nil {
+					logger.Errorln("Copy error " + err.Error())
+				}
 				logger.Infoln(NAME + " update to " + version)
 				break
 			}
