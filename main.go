@@ -18,18 +18,25 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/blang/semver"
 	"github.com/codegangsta/cli"
+	"github.com/google/go-github/github"
 	"github.com/mitchellh/go-homedir"
 	. "github.com/tj/go-debug"
 	"github.com/wsxiaoys/terminal/color"
+	"io"
 	"io/ioutil"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 )
 
+var VERSION = "v0.4.0"
+var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
 var CONTRIB_PATH = ".hooks"
@@ -66,9 +73,9 @@ var debug = Debug("main")
 
 func main() {
 	app := cli.NewApp()
-	app.Name = "git-hooks"
+	app.Name = NAME
 	app.Usage = "tool to manage project, user, and global Git hooks"
-	app.Version = "0.3.0"
+	app.Version = VERSION
 	app.Action = Bind(List)
 	app.Commands = []cli.Command{
 		{
@@ -91,6 +98,11 @@ func main() {
 			Name:   "uninstall-global",
 			Usage:  "Turn off the global .git directory template that has the reminder",
 			Action: Bind(UninstallGlobal),
+		},
+		{
+			Name:   "update",
+			Usage:  "Check and update git-hooks",
+			Action: Bind(Update),
 		},
 		{
 			Name:  "run",
@@ -200,6 +212,58 @@ func InstallGlobal() {
 
 func UninstallGlobal() {
 	GitExec("config --global --unset init.templatedir")
+}
+
+// Check latest version of git-hooks by github release
+// If there are new version of git-hooks, download and replace the current one
+func Update() {
+	logger.Infoln("Current git-hooks version is " + VERSION)
+	logger.Infoln("Check latest version...")
+
+	client := github.NewClient(nil)
+	releases, _, _ := client.Repositories.ListReleases(
+		"git-hooks", "git-hooks", &github.ListOptions{})
+	release := releases[0]
+	version := *release.TagName
+	logger.Infoln("Latest version is " + version)
+
+	// compare version
+	current, err := semver.New(VERSION[1:])
+	if err != nil {
+		logger.Errorln("Semver parse error " + err.Error())
+	}
+	latest, err := semver.New(version[1:])
+	if err != nil {
+		logger.Errorln("Semver parse error " + err.Error())
+	}
+	debug("Current version %s, latest version %s", current, latest)
+
+	if latest.GT(current) {
+		logger.Infoln("Download latest version...")
+		target := fmt.Sprintf("git-hooks_%s_%s", runtime.GOOS, runtime.GOARCH)
+		for _, asset := range release.Assets {
+			if *asset.Name == target {
+				file, err := DownloadFromUrl(*asset.BrowserDownloadUrl)
+				if err != nil {
+					logger.Errorln("Download error", err.Error())
+				}
+				logger.Infoln("Download complete")
+
+				// replace current version
+				file.Chmod(0755)
+				name, err := AbsExePath()
+				if err != nil {
+					logger.Errorln(err.Error())
+				}
+
+				os.Rename(file.Name(), name)
+				logger.Infoln(NAME + " update to " + version)
+				break
+			}
+		}
+	} else {
+		logger.Infoln("Your " + NAME + " is update to date")
+	}
 }
 
 func Run(cmds ...string) {
@@ -431,4 +495,48 @@ func Exists(path string) (bool, error) {
 		return false, nil
 	}
 	return false, err
+}
+
+// download to temp file by url
+// return the temp file
+func DownloadFromUrl(url string) (file *os.File, err error) {
+	debug("Downloading %s", url)
+
+	file, err = ioutil.TempFile(os.TempDir(), NAME)
+	fileName := file.Name()
+	output, err := os.Create(fileName)
+	if err != nil {
+		return
+	}
+	defer output.Close()
+
+	response, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	defer response.Body.Close()
+
+	n, err := io.Copy(output, response.Body)
+	if err != nil {
+		return
+	}
+
+	debug("Download success")
+	debug("%n bytes downloaded.", n)
+	return
+}
+
+// return fullpath to executable file.
+func AbsExePath() (name string, err error) {
+	name = os.Args[0]
+
+	if name[0] == '.' {
+		name, err = filepath.Abs(name)
+		if err == nil {
+			name = filepath.Clean(name)
+		}
+	} else {
+		name, err = exec.LookPath(filepath.Clean(name))
+	}
+	return
 }
