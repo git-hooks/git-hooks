@@ -1,4 +1,5 @@
 # git-hooks
+[![Build Status](https://travis-ci.org/git-hooks/git-hooks.svg)](https://travis-ci.org/git-hooks/git-hooks)
 
 > Hook manager
 
