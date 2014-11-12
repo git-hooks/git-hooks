@@ -1,7 +1,6 @@
 {
     "pre-commit": {
         "github.com/git-hooks/contrib": [
-            "bash_syntax",
             "jshint"
         ]
     }
