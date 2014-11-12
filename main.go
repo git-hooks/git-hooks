@@ -76,39 +76,39 @@ func main() {
 	app.Name = NAME
 	app.Usage = "tool to manage project, user, and global Git hooks"
 	app.Version = VERSION
-	app.Action = bind(List)
+	app.Action = bind(list)
 	app.Commands = []cli.Command{
 		{
 			Name:      "install",
 			ShortName: "i",
 			Usage:     "Replace existing hooks in this repository with a call to git hooks run [hook].  Move old hooks directory to hooks.old",
-			Action:    bind(Install, true),
+			Action:    bind(install, true),
 		},
 		{
 			Name:   "uninstall",
 			Usage:  "Remove existing hooks in this repository and rename hooks.old back to hooks",
-			Action: bind(Uninstall),
+			Action: bind(uninstall),
 		},
 		{
 			Name:   "install-global",
 			Usage:  "Create a template .git directory that that will be used whenever a git repository is created or cloned that will remind the user to install git-hooks",
-			Action: bind(InstallGlobal),
+			Action: bind(installGlobal),
 		},
 		{
 			Name:   "uninstall-global",
 			Usage:  "Turn off the global .git directory template that has the reminder",
-			Action: bind(UninstallGlobal),
+			Action: bind(uninstallGlobal),
 		},
 		{
 			Name:   "update",
 			Usage:  "Check and update git-hooks",
-			Action: bind(Update),
+			Action: bind(update),
 		},
 		{
 			Name:  "run",
 			Usage: "run <cmd> Run the hooks for <cmd> (such as pre-commit)",
 			Action: func(c *cli.Context) {
-				Run(c.Args()...)
+				run(c.Args()...)
 			},
 		},
 	}
@@ -116,7 +116,7 @@ func main() {
 	app.Run(os.Args)
 }
 
-func List() {
+func list() {
 	root, err := getGitRepoRoot()
 	if err != nil {
 		logger.Infoln("Current directory is not a git repo")
@@ -161,7 +161,7 @@ func List() {
 	}
 }
 
-func Install(isInstall bool) {
+func install(isInstall bool) {
 	dirPath, err := getGitDirPath()
 	if err != nil {
 		logger.Errorln("Current directory is not a git repo")
@@ -184,11 +184,11 @@ func Install(isInstall bool) {
 	}
 }
 
-func Uninstall() {
-	Install(false)
+func uninstall() {
+	install(false)
 }
 
-func InstallGlobal() {
+func installGlobal() {
 	templatedir := ".git-template-with-git-hooks"
 	home, err := homedir.Dir()
 	if err == nil {
@@ -210,13 +210,13 @@ func InstallGlobal() {
 	logger.Infoln("Git global config init.templatedir is now set to " + templatedir)
 }
 
-func UninstallGlobal() {
+func uninstallGlobal() {
 	gitExec("config --global --unset init.templatedir")
 }
 
 // Check latest version of git-hooks by github release
 // If there are new version of git-hooks, download and replace the current one
-func Update() {
+func update() {
 	logger.Infoln("Current git-hooks version is " + VERSION)
 	logger.Infoln("Check latest version...")
 
@@ -280,7 +280,7 @@ func Update() {
 	}
 }
 
-func Run(cmds ...string) {
+func run(cmds ...string) {
 	wd, err := os.Getwd()
 	if err == nil {
 		t := filepath.Base(cmds[0])
