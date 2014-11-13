@@ -419,7 +419,9 @@ func hookDirs() map[string]string {
 	}
 
 	// global scope
-	global, err := gitExec("config --get --global hooks.global")
+	// NOTE: git-hooks global hook actually configured via git --system
+	// configuration file
+	global, err := gitExec("config --get --system hooks.global")
 	if err == nil {
 		path := global
 		isExist, _ := exists(path)
@@ -452,7 +454,7 @@ func hookConfigs() map[string]string {
 		}
 	}
 
-	global, err := gitExec("config --get --global hooks.globalconfig")
+	global, err := gitExec("config --get --system hooks.globalconfig")
 	if err == nil {
 		path := global
 		isExist, _ := exists(path)
