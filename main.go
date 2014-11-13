@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.4.2"
+var VERSION = "v0.6.0"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -47,25 +47,35 @@ var tplPostInstall = `#!/usr/bin/env bash
 git-hooks run "$0" "$@"`
 
 var logger = struct {
-	Errorln func(...string)
-	Warnln  func(...string)
-	Infoln  func(...string)
+	Error   func(...interface{})
+	Warn    func(...interface{})
+	Info    func(...interface{})
+	Errorln func(...interface{})
+	Warnln  func(...interface{})
+	Infoln  func(...interface{})
 }{
-	Errorln: func(msgs ...string) {
-		for _, msg := range msgs {
-			color.Println("@r" + msg)
-		}
+	Error: func(msgs ...interface{}) {
+		msgs = append([]interface{}{"@r"}, msgs...)
+		color.Print(msgs...)
 		os.Exit(1)
 	},
-	Warnln: func(msgs ...string) {
-		for _, msg := range msgs {
-			color.Println("@r" + msg)
-		}
+	Warn: func(msgs ...interface{}) {
+		msgs = append([]interface{}{"@y"}, msgs...)
+		color.Print(msgs...)
 	},
-	Infoln: func(msgs ...string) {
-		for _, msg := range msgs {
-			color.Println("@b" + msg)
-		}
+	Info: func(msgs ...interface{}) {
+		color.Print(msgs...)
+	},
+	Errorln: func(msgs ...interface{}) {
+		msgs = append([]interface{}{"@r"}, msgs...)
+		color.Println(msgs...)
+	},
+	Warnln: func(msgs ...interface{}) {
+		msgs = append([]interface{}{"@y"}, msgs...)
+		color.Println(msgs...)
+	},
+	Infoln: func(msgs ...interface{}) {
+		color.Println(msgs...)
 	},
 }
 
@@ -76,39 +86,39 @@ func main() {
 	app.Name = NAME
 	app.Usage = "tool to manage project, user, and global Git hooks"
 	app.Version = VERSION
-	app.Action = bind(List)
+	app.Action = bind(list)
 	app.Commands = []cli.Command{
 		{
 			Name:      "install",
 			ShortName: "i",
 			Usage:     "Replace existing hooks in this repository with a call to git hooks run [hook].  Move old hooks directory to hooks.old",
-			Action:    bind(Install, true),
+			Action:    bind(install, true),
 		},
 		{
 			Name:   "uninstall",
 			Usage:  "Remove existing hooks in this repository and rename hooks.old back to hooks",
-			Action: bind(Uninstall),
+			Action: bind(uninstall),
 		},
 		{
 			Name:   "install-global",
 			Usage:  "Create a template .git directory that that will be used whenever a git repository is created or cloned that will remind the user to install git-hooks",
-			Action: bind(InstallGlobal),
+			Action: bind(installGlobal),
 		},
 		{
 			Name:   "uninstall-global",
 			Usage:  "Turn off the global .git directory template that has the reminder",
-			Action: bind(UninstallGlobal),
+			Action: bind(uninstallGlobal),
 		},
 		{
 			Name:   "update",
 			Usage:  "Check and update git-hooks",
-			Action: bind(Update),
+			Action: bind(update),
 		},
 		{
 			Name:  "run",
 			Usage: "run <cmd> Run the hooks for <cmd> (such as pre-commit)",
 			Action: func(c *cli.Context) {
-				Run(c.Args()...)
+				run(c.Args()...)
 			},
 		},
 	}
@@ -116,7 +126,8 @@ func main() {
 	app.Run(os.Args)
 }
 
-func List() {
+// List directory base hooks and configuration file based hooks
+func list() {
 	root, err := getGitRepoRoot()
 	if err != nil {
 		logger.Infoln("Current directory is not a git repo")
@@ -131,29 +142,29 @@ func List() {
 	}
 
 	for scope, dir := range hookDirs() {
-		fmt.Println(scope + " hooks")
+		logger.Infoln(scope + " hooks")
 		config, err := listHooksInDir(dir)
 		if err == nil {
 			for trigger, hooks := range config {
-				fmt.Println("  " + trigger)
+				logger.Infoln("  " + trigger)
 				for _, hook := range hooks {
-					fmt.Println("    - " + hook)
+					logger.Infoln("    - " + hook)
 				}
 			}
-			fmt.Println()
+			logger.Infoln()
 		}
 	}
 
 	for scope, configPath := range hookConfigs() {
-		fmt.Println(scope + " hooks")
+		logger.Infoln(scope + " hooks")
 		config, err := listHooksInConfig(configPath)
 		if err == nil {
 			for trigger, repo := range config {
-				fmt.Println("  " + trigger)
+				logger.Infoln("  " + trigger)
 				for repoName, hooks := range repo {
-					fmt.Println("  " + repoName)
+					logger.Infoln("  " + repoName)
 					for _, hook := range hooks {
-						fmt.Println("    - " + hook)
+						logger.Infoln("    - " + hook)
 					}
 				}
 			}
@@ -161,7 +172,8 @@ func List() {
 	}
 }
 
-func Install(isInstall bool) {
+// Install git-hook into current git repo
+func install(isInstall bool) {
 	dirPath, err := getGitDirPath()
 	if err != nil {
 		logger.Errorln("Current directory is not a git repo")
@@ -184,11 +196,13 @@ func Install(isInstall bool) {
 	}
 }
 
-func Uninstall() {
-	Install(false)
+// Uninstall git-hooks from current git repo
+func uninstall() {
+	install(false)
 }
 
-func InstallGlobal() {
+// Install git-hooks global by setup init.tempdir in ~/.gitconfig
+func installGlobal() {
 	templatedir := ".git-template-with-git-hooks"
 	home, err := homedir.Dir()
 	if err == nil {
@@ -210,13 +224,14 @@ func InstallGlobal() {
 	logger.Infoln("Git global config init.templatedir is now set to " + templatedir)
 }
 
-func UninstallGlobal() {
+// Reset init.tempdir
+func uninstallGlobal() {
 	gitExec("config --global --unset init.templatedir")
 }
 
 // Check latest version of git-hooks by github release
 // If there are new version of git-hooks, download and replace the current one
-func Update() {
+func update() {
 	logger.Infoln("Current git-hooks version is " + VERSION)
 	logger.Infoln("Check latest version...")
 
@@ -280,64 +295,60 @@ func Update() {
 	}
 }
 
-func Run(cmds ...string) {
-	wd, err := os.Getwd()
-	if err == nil {
-		t := filepath.Base(cmds[0])
-		args := cmds[1:]
-		for _, dir := range hookDirs() {
-			config, err := listHooksInDir(dir)
-			if err == nil {
-				for trigger, hooks := range config {
-					// semi scope
-					if trigger == t || trigger == ("_"+t) {
-						for _, hook := range hooks {
-							debug("Execute hook %s", hook)
-							cmd := exec.Command(filepath.Join(dir, trigger, hook), args...)
-							cmd.Dir = wd
-							out, err := cmd.Output()
-							if err != nil {
-								logger.Errorln(string(out), err.Error())
-							} else {
-								fmt.Print(string(out))
+// Execute project, semi, user and global scope hooks
+func run(cmds ...string) {
+	t := filepath.Base(cmds[0])
+	args := cmds[1:]
+	for _, dir := range hookDirs() {
+		config, err := listHooksInDir(dir)
+		if err == nil {
+			for trigger, hooks := range config {
+				// semi scope
+				if trigger == t || trigger == ("_"+t) {
+					for _, hook := range hooks {
+						out, err := runHook(filepath.Join(dir, trigger, hook), args...)
+						if err != nil {
+							logger.Error(out)
+						} else {
+							if out != "" {
+								logger.Info(out)
 							}
 						}
 					}
 				}
 			}
 		}
+	}
 
-		// find contrib directory
-		home, err := homedir.Dir()
-		contrib := CONTRIB_PATH
+	// find contrib directory
+	home, err := homedir.Dir()
+	contrib := CONTRIB_PATH
+	if err == nil {
+		contrib = filepath.Join(home, CONTRIB_PATH)
+	}
+	for _, configPath := range hookConfigs() {
+		config, err := listHooksInConfig(configPath)
 		if err == nil {
-			contrib = filepath.Join(home, CONTRIB_PATH)
-		}
-		for _, configPath := range hookConfigs() {
-			config, err := listHooksInConfig(configPath)
-			if err == nil {
-				for trigger, repo := range config {
-					if trigger == t {
-						for repoName, hooks := range repo {
-							// check if repo exist in local file system
-							isExist, _ := exists(filepath.Join(contrib, repoName))
-							if !isExist {
-								logger.Infoln("Cloning repo " + repoName)
-								_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
-								if err != nil {
-									continue
-								}
+			for trigger, repo := range config {
+				if trigger == t {
+					for repoName, hooks := range repo {
+						// check if repo exist in local file system
+						isExist, _ := exists(filepath.Join(contrib, repoName))
+						if !isExist {
+							logger.Infoln("Cloning repo " + repoName)
+							_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
+							if err != nil {
+								continue
 							}
-							// execute hook
-							for _, hook := range hooks {
-								debug("Execute contrib hook %s", hook)
-								cmd := exec.Command(filepath.Join(contrib, repoName, hook, "hook"), args...)
-								cmd.Dir = wd
-								out, err := cmd.Output()
-								if err != nil {
-									logger.Errorln(string(out), err.Error())
-								} else {
-									fmt.Print(string(out))
+						}
+						// execute hook
+						for _, hook := range hooks {
+							out, err := runHook(filepath.Join(contrib, repoName, hook, "hook"), args...)
+							if err != nil {
+								logger.Error(out)
+							} else {
+								if out != "" {
+									logger.Info(out)
 								}
 							}
 						}
@@ -348,6 +359,39 @@ func Run(cmds ...string) {
 	}
 }
 
+// Execute specific hook with arguments
+// Return error message as out if error occured
+func runHook(hook string, args ...string) (out string, err error) {
+	debug("Execute contrib hook %s %s", hook, args)
+
+	wd, err := os.Getwd()
+	if err != nil {
+		return err.Error(), err
+	}
+
+	cmd := exec.Command(hook, args...)
+	cmd.Dir = wd
+	result, err := cmd.Output()
+	if err != nil {
+		return err.Error(), err
+	} else {
+		return string(result), nil
+	}
+}
+
+// List available hooks inside directory
+// Under trigger directory,
+// Treate file as a hook if it's executable,
+// Treate directory as a hook if it contain an executable file with the name of `trigger`
+// Example:
+// githooks
+//     ├── _pre-commit
+//     │   ├── test
+//     │   └── whitespace
+//     └── pre-commit
+//         ├── dir
+//         │   └── pre-commit
+//         └── whitespace
 func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
 	hooks = make(map[string][]string)
 
@@ -357,12 +401,33 @@ func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
 	}
 
 	for _, dir := range dirs {
+		debug("dir %s", dir.Name())
 		files, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name()))
 		if err == nil {
 			hooks[dir.Name()] = make([]string, 0)
 			for _, file := range files {
-				if file.Name()[0] != '.' {
-					hooks[dir.Name()] = append(hooks[dir.Name()], file.Name())
+				debug("file %s", file.Name())
+				// filter files or directories
+				file, err := os.Stat(filepath.Join(dirname, dir.Name(), file.Name()))
+				if err == nil {
+					debug("IsDir %s", file.IsDir())
+					if file.IsDir() {
+						libs, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name(), file.Name()))
+						if err == nil {
+							for _, lib := range libs {
+								libname := lib.Name()
+								extension := filepath.Ext(libname)
+								if isExecutable(lib) && libname[0:len(libname)-len(extension)] == dir.Name() {
+									hooks[dir.Name()] = append(hooks[dir.Name()], filepath.Join(file.Name(), libname))
+								}
+							}
+						}
+					} else {
+						debug("Executable %s", file.Mode()&0111 != 0)
+						if isExecutable(file) {
+							hooks[dir.Name()] = append(hooks[dir.Name()], file.Name())
+						}
+					}
 				}
 			}
 		}
@@ -387,7 +452,7 @@ func installInto(dir string, template string) {
 	os.Rename(filepath.Join(dir, "hooks"), filepath.Join(dir, "hooks.old"))
 	os.Mkdir(filepath.Join(dir, "hooks"), 0755)
 	for _, hook := range TRIGGERS {
-		fmt.Println("Install ", hook)
+		logger.Infoln("Install ", hook)
 		f, _ := os.Create(filepath.Join(dir, "hooks", hook))
 		f.WriteString(template)
 		f.Sync()
@@ -555,4 +620,8 @@ func absExePath() (name string, err error) {
 		name, err = exec.LookPath(filepath.Clean(name))
 	}
 	return
+}
+
+func isExecutable(info os.FileInfo) bool {
+	return info.Mode()&0111 != 0
 }
