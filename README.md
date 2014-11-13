@@ -3,7 +3,7 @@
 
 > Hook manager
 
-Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks)
+Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks), with extra features
 
 ## Install
 
