@@ -35,7 +35,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.6.0"
+var VERSION = "v0.7.0"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -91,22 +91,22 @@ func main() {
 		{
 			Name:      "install",
 			ShortName: "i",
-			Usage:     "Replace existing hooks in this repository with a call to git hooks run [hook].  Move old hooks directory to hooks.old",
+			Usage:     "Tell repo to use git-hooks by replace existing hooks with a call to git-hooks. Old hooks will be reserved in hooks.old",
 			Action:    bind(install, true),
 		},
 		{
 			Name:   "uninstall",
-			Usage:  "Remove existing hooks in this repository and rename hooks.old back to hooks",
+			Usage:  "Stop using git-hooks and restore old hooks",
 			Action: bind(uninstall),
 		},
 		{
 			Name:   "install-global",
-			Usage:  "Create a template .git directory that that will be used whenever a git repository is created or cloned that will remind the user to install git-hooks",
+			Usage:  "Whenever a git repository is created or cloned user will be remind to install git-hooks",
 			Action: bind(installGlobal),
 		},
 		{
 			Name:   "uninstall-global",
-			Usage:  "Turn off the global .git directory template that has the reminder",
+			Usage:  "Turn off the global reminder",
 			Action: bind(uninstallGlobal),
 		},
 		{
@@ -116,10 +116,16 @@ func main() {
 		},
 		{
 			Name:  "run",
-			Usage: "run <cmd> Run the hooks for <cmd> (such as pre-commit)",
+			Usage: "Run hooks",
 			Action: func(c *cli.Context) {
 				run(c.Args()...)
 			},
+		},
+		{
+			Name:      "identity",
+			ShortName: "id",
+			Usage:     "Repo identity",
+			Action:    bind(identity),
 		},
 	}
 
@@ -293,6 +299,15 @@ func update() {
 	} else {
 		logger.Infoln("Your " + NAME + " is update to date")
 	}
+}
+
+func identity() {
+	identity, err := gitExec("rev-list --max-parents=0 HEAD")
+	if err != nil {
+		logger.Errorln(err.Error())
+	}
+
+	logger.Infoln(identity)
 }
 
 // Execute project, semi, user and global scope hooks
