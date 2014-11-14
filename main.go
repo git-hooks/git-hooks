@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -149,7 +150,7 @@ func list() {
 
 	for scope, dir := range hookDirs() {
 		logger.Infoln(scope + " hooks")
-		config, err := listHooksInDir(dir)
+		config, err := listHooksInDir(scope, dir)
 		if err == nil {
 			for trigger, hooks := range config {
 				logger.Infoln("  " + trigger)
@@ -161,6 +162,7 @@ func list() {
 		}
 	}
 
+	logger.Infoln("Community hooks")
 	for scope, configPath := range hookConfigs() {
 		logger.Infoln(scope + " hooks")
 		config, err := listHooksInConfig(configPath)
@@ -314,8 +316,8 @@ func identity() {
 func run(cmds ...string) {
 	t := filepath.Base(cmds[0])
 	args := cmds[1:]
-	for _, dir := range hookDirs() {
-		config, err := listHooksInDir(dir)
+	for scope, dir := range hookDirs() {
+		config, err := listHooksInDir(scope, dir)
 		if err == nil {
 			for trigger, hooks := range config {
 				// semi scope
@@ -407,7 +409,7 @@ func runHook(hook string, args ...string) (out string, err error) {
 //         ├── dir
 //         │   └── pre-commit
 //         └── whitespace
-func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
+func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error) {
 	hooks = make(map[string][]string)
 
 	dirs, err := ioutil.ReadDir(dirname)
@@ -416,16 +418,13 @@ func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
 	}
 
 	for _, dir := range dirs {
-		debug("dir %s", dir.Name())
 		files, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name()))
 		if err == nil {
 			hooks[dir.Name()] = make([]string, 0)
 			for _, file := range files {
-				debug("file %s", file.Name())
 				// filter files or directories
 				file, err := os.Stat(filepath.Join(dirname, dir.Name(), file.Name()))
 				if err == nil {
-					debug("IsDir %s", file.IsDir())
 					if file.IsDir() {
 						libs, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name(), file.Name()))
 						if err == nil {
@@ -438,7 +437,6 @@ func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
 							}
 						}
 					} else {
-						debug("Executable %s", file.Mode()&0111 != 0)
 						if isExecutable(file) {
 							hooks[dir.Name()] = append(hooks[dir.Name()], file.Name())
 						}
@@ -447,7 +445,103 @@ func listHooksInDir(dirname string) (hooks map[string][]string, err error) {
 			}
 		}
 	}
+	debug("%s scope hooks %s", scope, hooks)
+
+	//
+	// exclude
+	//
+	// exclude only works for user and global scope
+	if scope == "user" || scope == "global" {
+		file, err := ioutil.ReadFile(filepath.Join(dirname, "excludes.json"))
+		if err == nil {
+			var excludes interface{}
+			json.Unmarshal(file, &excludes)
+			debug("excludes %s", excludes)
+
+			wrapper := make(map[string]interface{})
+			// repoid will be empty string if not in a git repo or don't have any commit yet
+			repoid, _ := gitExec("rev-list --max-parents=0 HEAD")
+
+			if scope == "user" {
+				wrapper[repoid] = hooks
+				filter(wrapper, excludes)
+				hooks = wrapper[repoid].(map[string][]string)
+			} else {
+				// global scope exclude
+				user, err := user.Current()
+				username := ""
+				if err == nil {
+					username = user.Username
+				}
+				wrapper[username] = make(map[string]interface{})
+				wrapper[username].(map[string]interface{})[repoid] = hooks
+				filter(wrapper, excludes)
+				hooks = wrapper[username].(map[string]interface{})[repoid].(map[string][]string)
+			}
+		}
+	}
+	debug("%s scope hooks %s after exclusion", scope, hooks)
+
 	return hooks, nil
+}
+
+// TODO(CatTail): seperate filter into external module
+func filter(data, excludes interface{}) {
+	filterInternal(reflect.ValueOf(data), reflect.ValueOf(excludes))
+}
+
+func filterInternal(data, excludes reflect.Value) {
+	if data.Type().Kind() == reflect.Interface {
+		data = data.Elem()
+	}
+	if excludes.Type().Kind() == reflect.Interface {
+		excludes = excludes.Elem()
+	}
+	if excludes.MapIndex(reflect.ValueOf("*")).IsValid() {
+		for _, key := range data.MapKeys() {
+			filterInternal(data.MapIndex(key), excludes.MapIndex(reflect.ValueOf("*")))
+		}
+	} else {
+		for _, key := range data.MapKeys() {
+			value := data.MapIndex(key)
+			exclude := excludes.MapIndex(key)
+			if exclude.IsValid() {
+				if exclude.Type().Kind() == reflect.Interface {
+					exclude = exclude.Elem()
+				}
+				switch exclude.Type().Kind() {
+				case reflect.Slice:
+					for i := 0; i < exclude.Len(); i++ {
+						data.SetMapIndex(key, remove(value, find(value, exclude.Index(i))))
+					}
+				case reflect.String:
+					if exclude.Interface() == "*" {
+						data.SetMapIndex(key, reflect.ValueOf(make(map[string][]string)))
+					}
+				case reflect.Map:
+					filterInternal(value, exclude)
+				}
+			}
+		}
+	}
+}
+
+func find(array, item reflect.Value) (index int) {
+	index = -1
+	for idx := 0; idx < array.Len(); idx++ {
+		if array.Index(idx).Interface() == item.Interface() {
+			index = idx
+			break
+		}
+	}
+	return
+}
+
+func remove(array reflect.Value, index int) reflect.Value {
+	if index < 0 || index > array.Len() {
+		return array
+	}
+	return reflect.AppendSlice(array.Slice(0, index), array.Slice(index+1, array.Len()))
 }
 
 func listHooksInConfig(config string) (hooks map[string]map[string][]string, err error) {
