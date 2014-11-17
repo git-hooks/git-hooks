@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/blang/semver"
+	"github.com/cattail/go-exclude"
 	"github.com/codegangsta/cli"
 	"github.com/google/go-github/github"
 	"github.com/mitchellh/go-homedir"
@@ -36,7 +37,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.7.0"
+var VERSION = "v0.7.1"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -464,7 +465,7 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 
 			if scope == "user" {
 				wrapper[repoid] = hooks
-				filter(wrapper, excludes)
+				exclude.Exclude(wrapper, excludes)
 				hooks = wrapper[repoid].(map[string][]string)
 			} else {
 				// global scope exclude
@@ -475,7 +476,7 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 				}
 				wrapper[username] = make(map[string]interface{})
 				wrapper[username].(map[string]interface{})[repoid] = hooks
-				filter(wrapper, excludes)
+				exclude.Exclude(wrapper, excludes)
 				hooks = wrapper[username].(map[string]interface{})[repoid].(map[string][]string)
 			}
 		}
@@ -483,65 +484,6 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 	debug("%s scope hooks %s after exclusion", scope, hooks)
 
 	return hooks, nil
-}
-
-// TODO(CatTail): seperate filter into external module
-func filter(data, excludes interface{}) {
-	filterInternal(reflect.ValueOf(data), reflect.ValueOf(excludes))
-}
-
-func filterInternal(data, excludes reflect.Value) {
-	if data.Type().Kind() == reflect.Interface {
-		data = data.Elem()
-	}
-	if excludes.Type().Kind() == reflect.Interface {
-		excludes = excludes.Elem()
-	}
-	if excludes.MapIndex(reflect.ValueOf("*")).IsValid() {
-		for _, key := range data.MapKeys() {
-			filterInternal(data.MapIndex(key), excludes.MapIndex(reflect.ValueOf("*")))
-		}
-	} else {
-		for _, key := range data.MapKeys() {
-			value := data.MapIndex(key)
-			exclude := excludes.MapIndex(key)
-			if exclude.IsValid() {
-				if exclude.Type().Kind() == reflect.Interface {
-					exclude = exclude.Elem()
-				}
-				switch exclude.Type().Kind() {
-				case reflect.Slice:
-					for i := 0; i < exclude.Len(); i++ {
-						data.SetMapIndex(key, remove(value, find(value, exclude.Index(i))))
-					}
-				case reflect.String:
-					if exclude.Interface() == "*" {
-						data.SetMapIndex(key, reflect.ValueOf(make(map[string][]string)))
-					}
-				case reflect.Map:
-					filterInternal(value, exclude)
-				}
-			}
-		}
-	}
-}
-
-func find(array, item reflect.Value) (index int) {
-	index = -1
-	for idx := 0; idx < array.Len(); idx++ {
-		if array.Index(idx).Interface() == item.Interface() {
-			index = idx
-			break
-		}
-	}
-	return
-}
-
-func remove(array reflect.Value, index int) reflect.Value {
-	if index < 0 || index > array.Len() {
-		return array
-	}
-	return reflect.AppendSlice(array.Slice(0, index), array.Slice(index+1, array.Len()))
 }
 
 func listHooksInConfig(config string) (hooks map[string]map[string][]string, err error) {
