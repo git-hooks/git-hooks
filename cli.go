@@ -31,7 +31,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.7.2"
+var VERSION = "v0.7.3"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -65,6 +65,7 @@ var logger = struct {
 	Errorln: func(msgs ...interface{}) {
 		msgs = append([]interface{}{"@r"}, msgs...)
 		color.Println(msgs...)
+		os.Exit(1)
 	},
 	Warnln: func(msgs ...interface{}) {
 		msgs = append([]interface{}{"@y"}, msgs...)
