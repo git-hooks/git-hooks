@@ -21,7 +21,6 @@ import (
 	"github.com/google/go-github/github"
 	"github.com/mitchellh/go-homedir"
 	. "github.com/tj/go-debug"
-	"github.com/wsxiaoys/terminal/color"
 	"io"
 	"io/ioutil"
 	"os"
@@ -31,7 +30,7 @@ import (
 	"strings"
 )
 
-var VERSION = "v0.7.3"
+var VERSION = "v0.7.4"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -41,40 +40,6 @@ var tplPreInstall = `#!/usr/bin/env bash
 echo \"git hooks not installed in this repository.  Run 'git hooks --install' to install it or 'git hooks -h' for more information.\"`
 var tplPostInstall = `#!/usr/bin/env bash
 git-hooks run "$0" "$@"`
-
-var logger = struct {
-	Error   func(...interface{})
-	Warn    func(...interface{})
-	Info    func(...interface{})
-	Errorln func(...interface{})
-	Warnln  func(...interface{})
-	Infoln  func(...interface{})
-}{
-	Error: func(msgs ...interface{}) {
-		msgs = append([]interface{}{"@r"}, msgs...)
-		color.Print(msgs...)
-		os.Exit(1)
-	},
-	Warn: func(msgs ...interface{}) {
-		msgs = append([]interface{}{"@y"}, msgs...)
-		color.Print(msgs...)
-	},
-	Info: func(msgs ...interface{}) {
-		color.Print(msgs...)
-	},
-	Errorln: func(msgs ...interface{}) {
-		msgs = append([]interface{}{"@r"}, msgs...)
-		color.Println(msgs...)
-		os.Exit(1)
-	},
-	Warnln: func(msgs ...interface{}) {
-		msgs = append([]interface{}{"@y"}, msgs...)
-		color.Println(msgs...)
-	},
-	Infoln: func(msgs ...interface{}) {
-		color.Println(msgs...)
-	},
-}
 
 var debug = Debug("main")
 
