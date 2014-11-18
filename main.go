@@ -35,6 +35,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"syscall"
 )
 
 var VERSION = "v0.7.1"
@@ -59,7 +60,6 @@ var logger = struct {
 	Error: func(msgs ...interface{}) {
 		msgs = append([]interface{}{"@r"}, msgs...)
 		color.Print(msgs...)
-		os.Exit(1)
 	},
 	Warn: func(msgs ...interface{}) {
 		msgs = append([]interface{}{"@y"}, msgs...)
@@ -324,13 +324,10 @@ func run(cmds ...string) {
 				// semi scope
 				if trigger == t || trigger == ("_"+t) {
 					for _, hook := range hooks {
-						out, err := runHook(filepath.Join(dir, trigger, hook), args...)
+						status, err := runHook(filepath.Join(dir, trigger, hook), args...)
 						if err != nil {
-							logger.Error(out)
-						} else {
-							if out != "" {
-								logger.Info(out)
-							}
+							logger.Errorln(err.Error())
+							os.Exit(status)
 						}
 					}
 				}
@@ -361,13 +358,10 @@ func run(cmds ...string) {
 						}
 						// execute hook
 						for _, hook := range hooks {
-							out, err := runHook(filepath.Join(contrib, repoName, hook, "hook"), args...)
+							status, err := runHook(filepath.Join(contrib, repoName, hook, "hook"), args...)
 							if err != nil {
-								logger.Error(out)
-							} else {
-								if out != "" {
-									logger.Info(out)
-								}
+								logger.Errorln(err.Error())
+								os.Exit(status)
 							}
 						}
 					}
@@ -379,22 +373,22 @@ func run(cmds ...string) {
 
 // Execute specific hook with arguments
 // Return error message as out if error occured
-func runHook(hook string, args ...string) (out string, err error) {
+func runHook(hook string, args ...string) (status int, err error) {
 	debug("Execute contrib hook %s %s", hook, args)
 
-	wd, err := os.Getwd()
-	if err != nil {
-		return err.Error(), err
-	}
-
 	cmd := exec.Command(hook, args...)
-	cmd.Dir = wd
-	result, err := cmd.Output()
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	err = cmd.Run()
+
 	if err != nil {
-		return err.Error(), err
+		if msg, ok := err.(*exec.ExitError); ok {
+			status = msg.Sys().(syscall.WaitStatus).ExitStatus()
+		}
 	} else {
-		return string(result), nil
+		status = 0
 	}
+	return status, err
 }
 
 // List available hooks inside directory
