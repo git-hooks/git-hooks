@@ -60,8 +60,8 @@ func exists(path string) (bool, error) {
 	return false, err
 }
 
-// download to temp file by url
-// return the temp file
+// Download file from url.
+// Downloaded file stored in temporary directory
 func downloadFromUrl(url string) (file *os.File, err error) {
 	debug("Downloading %s", url)
 
@@ -90,8 +90,8 @@ func downloadFromUrl(url string) (file *os.File, err error) {
 }
 
 // return fullpath to executable file.
-func absExePath() (name string, err error) {
-	name = os.Args[0]
+func absExePath(exe string) (name string, err error) {
+	name = exe
 
 	if name[0] == '.' {
 		name, err = filepath.Abs(name)
