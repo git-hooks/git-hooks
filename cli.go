@@ -15,11 +15,8 @@ hook: bsd
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
 	"github.com/blang/semver"
-	"github.com/cattail/go-exclude"
 	"github.com/codegangsta/cli"
 	"github.com/google/go-github/github"
 	"github.com/mitchellh/go-homedir"
@@ -27,17 +24,14 @@ import (
 	"github.com/wsxiaoys/terminal/color"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
-	"reflect"
 	"runtime"
 	"strings"
 )
 
-var VERSION = "v0.7.1"
+var VERSION = "v0.7.2"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -397,116 +391,6 @@ func runHook(hook string, args ...string) (out string, err error) {
 	}
 }
 
-// List available hooks inside directory
-// Under trigger directory,
-// Treate file as a hook if it's executable,
-// Treate directory as a hook if it contain an executable file with the name of `trigger`
-// Example:
-// githooks
-//     ├── _pre-commit
-//     │   ├── test
-//     │   └── whitespace
-//     └── pre-commit
-//         ├── dir
-//         │   └── pre-commit
-//         └── whitespace
-func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error) {
-	hooks = make(map[string][]string)
-
-	dirs, err := ioutil.ReadDir(dirname)
-	if err != nil {
-		return
-	}
-
-	for _, dir := range dirs {
-		files, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name()))
-		if err == nil {
-			hooks[dir.Name()] = make([]string, 0)
-			for _, file := range files {
-				// filter files or directories
-				file, err := os.Stat(filepath.Join(dirname, dir.Name(), file.Name()))
-				if err == nil {
-					if file.IsDir() {
-						libs, err := ioutil.ReadDir(filepath.Join(dirname, dir.Name(), file.Name()))
-						if err == nil {
-							for _, lib := range libs {
-								libname := lib.Name()
-								extension := filepath.Ext(libname)
-								if isExecutable(lib) && libname[0:len(libname)-len(extension)] == dir.Name() {
-									hooks[dir.Name()] = append(hooks[dir.Name()], filepath.Join(file.Name(), libname))
-								}
-							}
-						}
-					} else {
-						if isExecutable(file) {
-							hooks[dir.Name()] = append(hooks[dir.Name()], file.Name())
-						}
-					}
-				}
-			}
-		}
-	}
-	debug("%s scope hooks %s", scope, hooks)
-
-	//
-	// exclude
-	//
-	// exclude only works for user and global scope
-	if scope == "user" || scope == "global" {
-		file, err := ioutil.ReadFile(filepath.Join(dirname, "excludes.json"))
-		if err == nil {
-			var excludes interface{}
-			json.Unmarshal(file, &excludes)
-			debug("excludes %s", excludes)
-
-			wrapper := make(map[string]interface{})
-			// repoid will be empty string if not in a git repo or don't have any commit yet
-			repoid, _ := gitExec("rev-list --max-parents=0 HEAD")
-
-			if scope == "user" {
-				wrapper[repoid] = hooks
-				exclude.Exclude(wrapper, excludes)
-				if wrapper[repoid] == nil {
-					wrapper[repoid] = make(map[string][]string)
-				}
-				hooks = wrapper[repoid].(map[string][]string)
-			} else {
-				// global scope exclude
-				user, err := user.Current()
-				username := ""
-				if err == nil {
-					username = user.Username
-				}
-				wrapper[username] = make(map[string]interface{})
-				wrapper[username].(map[string]interface{})[repoid] = hooks
-				exclude.Exclude(wrapper, excludes)
-				if wrapper[username] == nil {
-					wrapper[username] = make(map[string][]string)
-				}
-				if wrapper[repoid] == nil {
-					wrapper[repoid] = make(map[string][]string)
-				}
-				hooks = wrapper[username].(map[string]interface{})[repoid].(map[string][]string)
-			}
-		}
-	}
-	debug("%s scope hooks %s after exclusion", scope, hooks)
-
-	return hooks, nil
-}
-
-func listHooksInConfig(config string) (hooks map[string]map[string][]string, err error) {
-	hooks = make(map[string]map[string][]string)
-
-	file, err := ioutil.ReadFile(config)
-	if err != nil {
-		return
-	}
-
-	json.Unmarshal(file, &hooks)
-	return
-}
-
 func installInto(dir string, template string) {
 	// backup
 	os.Rename(filepath.Join(dir, "hooks"), filepath.Join(dir, "hooks.old"))
@@ -518,170 +402,4 @@ func installInto(dir string, template string) {
 		f.Sync()
 		f.Chmod(0755)
 	}
-}
-
-func hookDirs() map[string]string {
-	dirs := make(map[string]string)
-
-	// project scope
-	root, err := getGitRepoRoot()
-	if err == nil {
-		path := filepath.Join(root, "githooks")
-		isExist, _ := exists(path)
-		if isExist {
-			dirs["project"] = path
-		}
-	}
-
-	// user scope
-	home, err := homedir.Dir()
-	if err == nil {
-		path := filepath.Join(home, ".githooks")
-		isExist, _ := exists(path)
-		if isExist {
-			dirs["user"] = path
-		}
-	}
-
-	// global scope
-	// NOTE: git-hooks global hook actually configured via git --system
-	// configuration file
-	global, err := gitExec("config --get --system hooks.global")
-	if err == nil {
-		path := global
-		isExist, _ := exists(path)
-		if isExist {
-			dirs["global"] = path
-		}
-	}
-
-	return dirs
-}
-
-func hookConfigs() map[string]string {
-	configs := make(map[string]string)
-
-	root, err := getGitRepoRoot()
-	if err == nil {
-		path := filepath.Join(root, "githooks.json")
-		isExist, _ := exists(path)
-		if isExist {
-			configs["project"] = path
-		}
-	}
-
-	home, err := homedir.Dir()
-	if err == nil {
-		path := filepath.Join(home, ".githooks.json")
-		isExist, _ := exists(path)
-		if isExist {
-			configs["user"] = path
-		}
-	}
-
-	global, err := gitExec("config --get --system hooks.globalconfig")
-	if err == nil {
-		path := global
-		isExist, _ := exists(path)
-		if isExist {
-			configs["global"] = path
-		}
-	}
-
-	return configs
-}
-
-func getGitRepoRoot() (string, error) {
-	return gitExec("rev-parse --show-toplevel")
-}
-
-func getGitDirPath() (string, error) {
-	return gitExec("rev-parse --git-dir")
-}
-
-func gitExec(args ...string) (string, error) {
-	args = strings.Split(strings.Join(args, " "), " ")
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", err
-	}
-
-	cmd := exec.Command("git", args...)
-	cmd.Dir = wd
-
-	if out, err := cmd.Output(); err == nil {
-		return string(bytes.Trim(out, "\n")), nil
-	} else {
-		return "", err
-	}
-}
-
-func bind(f interface{}, args ...interface{}) func(c *cli.Context) {
-	callable := reflect.ValueOf(f)
-	arguments := make([]reflect.Value, len(args))
-	for i, arg := range args {
-		arguments[i] = reflect.ValueOf(arg)
-	}
-	return func(c *cli.Context) {
-		callable.Call(arguments)
-	}
-}
-
-func exists(path string) (bool, error) {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true, nil
-	}
-	if os.IsNotExist(err) {
-		return false, nil
-	}
-	return false, err
-}
-
-// download to temp file by url
-// return the temp file
-func downloadFromUrl(url string) (file *os.File, err error) {
-	debug("Downloading %s", url)
-
-	file, err = ioutil.TempFile(os.TempDir(), NAME)
-	fileName := file.Name()
-	output, err := os.Create(fileName)
-	if err != nil {
-		return
-	}
-	defer output.Close()
-
-	response, err := http.Get(url)
-	if err != nil {
-		return
-	}
-	defer response.Body.Close()
-
-	n, err := io.Copy(output, response.Body)
-	if err != nil {
-		return
-	}
-
-	debug("Download success")
-	debug("%n bytes downloaded.", n)
-	return
-}
-
-// return fullpath to executable file.
-func absExePath() (name string, err error) {
-	name = os.Args[0]
-
-	if name[0] == '.' {
-		name, err = filepath.Abs(name)
-		if err == nil {
-			name = filepath.Clean(name)
-		}
-	} else {
-		name, err = exec.LookPath(filepath.Clean(name))
-	}
-	return
-}
-
-func isExecutable(info os.FileInfo) bool {
-	return info.Mode()&0111 != 0
 }
