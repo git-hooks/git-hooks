@@ -236,7 +236,7 @@ func update() {
 
 				// replace current version
 				file.Chmod(0755)
-				name, err := absExePath()
+				name, err := absExePath(os.Args[0])
 				if err != nil {
 					logger.Errorln(err.Error())
 				}

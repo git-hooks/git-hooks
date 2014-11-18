@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 )
 
+// list directories for project, user and global scopes
 func hookDirs() map[string]string {
 	dirs := make(map[string]string)
 
@@ -48,6 +49,7 @@ func hookDirs() map[string]string {
 	return dirs
 }
 
+// list configurations for project, user and global scopes
 func hookConfigs() map[string]string {
 	configs := make(map[string]string)
 
@@ -79,18 +81,6 @@ func hookConfigs() map[string]string {
 	}
 
 	return configs
-}
-
-func listHooksInConfig(config string) (hooks map[string]map[string][]string, err error) {
-	hooks = make(map[string]map[string][]string)
-
-	file, err := ioutil.ReadFile(config)
-	if err != nil {
-		return
-	}
-
-	json.Unmarshal(file, &hooks)
-	return
 }
 
 // List available hooks inside directory
@@ -189,4 +179,17 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 	debug("%s scope hooks %s after exclusion", scope, hooks)
 
 	return hooks, nil
+}
+
+// List available hooks configured by config file
+func listHooksInConfig(config string) (hooks map[string]map[string][]string, err error) {
+	hooks = make(map[string]map[string][]string)
+
+	file, err := ioutil.ReadFile(config)
+	if err != nil {
+		return
+	}
+
+	json.Unmarshal(file, &hooks)
+	return
 }
