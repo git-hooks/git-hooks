@@ -466,6 +466,9 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 			if scope == "user" {
 				wrapper[repoid] = hooks
 				exclude.Exclude(wrapper, excludes)
+				if wrapper[repoid] == nil {
+					wrapper[repoid] = make(map[string][]string)
+				}
 				hooks = wrapper[repoid].(map[string][]string)
 			} else {
 				// global scope exclude
@@ -477,6 +480,12 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 				wrapper[username] = make(map[string]interface{})
 				wrapper[username].(map[string]interface{})[repoid] = hooks
 				exclude.Exclude(wrapper, excludes)
+				if wrapper[username] == nil {
+					wrapper[username] = make(map[string][]string)
+				}
+				if wrapper[repoid] == nil {
+					wrapper[repoid] = make(map[string][]string)
+				}
 				hooks = wrapper[username].(map[string]interface{})[repoid].(map[string][]string)
 			}
 		}
