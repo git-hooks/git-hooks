@@ -29,10 +29,10 @@ func Error(msgs ...interface{}) {
 	Errors(1, msgs...)
 }
 
-func Errors(statu int, msgs ...interface{}) {
+func Errors(status int, msgs ...interface{}) {
 	msgs = append([]interface{}{"@r"}, msgs...)
 	color.Print(msgs...)
-	os.Exit(statu)
+	os.Exit(status)
 }
 func Warn(msgs ...interface{}) {
 	msgs = append([]interface{}{"@y"}, msgs...)
@@ -44,8 +44,8 @@ func Info(msgs ...interface{}) {
 func Errorln(msgs ...interface{}) {
 	Errorsln(1, msgs...)
 }
-func Errorsln(statu int, msgs ...interface{}) {
-	Errors(statu, append(msgs, "\n")...)
+func Errorsln(status int, msgs ...interface{}) {
+	Errors(status, append(msgs, "\n")...)
 }
 func Warnln(msgs ...interface{}) {
 	Warn(append(msgs, "\n")...)
