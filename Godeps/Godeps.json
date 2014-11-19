@@ -1,0 +1,45 @@
+{
+	"ImportPath": "github.com/git-hooks/git-hooks",
+	"GoVersion": "go1.3.3",
+	"Deps": [
+		{
+			"ImportPath": "github.com/blang/semver",
+			"Comment": "v1.0.4-2-gb1824b9",
+			"Rev": "b1824b988f6f3762cd7e5bc3b3582e743f87597c"
+		},
+		{
+			"ImportPath": "github.com/cattail/go-exclude",
+			"Rev": "7e63167c2dab55dc8f1a4107e3b01031c0e8847e"
+		},
+		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-26-gf7ebb76",
+			"Rev": "f7ebb761e83e21225d1d8954fde853bf8edd46c4"
+		},
+		{
+			"ImportPath": "github.com/google/go-github/github",
+			"Rev": "5257f706765dede9b127e247327e55b3a89ccc1e"
+		},
+		{
+			"ImportPath": "github.com/google/go-querystring/query",
+			"Rev": "d8840cbb2baa915f4836edda4750050a2c0b7aea"
+		},
+		{
+			"ImportPath": "github.com/mitchellh/go-homedir",
+			"Rev": "7d2d8c8a4e078ce3c58736ab521a40b37a504c52"
+		},
+		{
+			"ImportPath": "github.com/stretchr/testify/assert",
+			"Rev": "d6577e08ec30538639ac0ea38b562b6f250e9055"
+		},
+		{
+			"ImportPath": "github.com/tj/go-debug",
+			"Comment": "v2.0.0",
+			"Rev": "ff4a55a20a86994118644bbddc6a216da193cc13"
+		},
+		{
+			"ImportPath": "github.com/wsxiaoys/terminal/color",
+			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
+		}
+	]
+}
