@@ -2,7 +2,7 @@ test:
 	go test -v ./...
 
 clean:
-	rm -rf git-hooks_*
+	rm -rf build/*
 
 build:
 	gox -os="linux darwin" -output="build/{{.Dir}}_{{.OS}}_{{.Arch}}"
