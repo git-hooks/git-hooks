@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
-	"github.com/wsxiaoys/terminal/color"
 	"os/exec"
 	"syscall"
 	"testing"
@@ -20,11 +19,4 @@ func TestInstall(t *testing.T) {
 		status = msg.Sys().(syscall.WaitStatus).ExitStatus()
 	}
 	assert.Equal(t, status, 1)
-}
-
-func TestIdentity(t *testing.T) {
-	cmd := exec.Command("git", "hooks", "id")
-	b, err := cmd.Output()
-	assert.Nil(t, err)
-	assert.Equal(t, string(b), color.Sprint("553ec650fd4f90003774e2ff00b10bc9aa9ec802\n"))
 }

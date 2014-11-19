@@ -5,6 +5,10 @@ clean:
 	rm -rf git-hooks_*
 
 build:
-	gox -os="linux darwin"
+	gox -os="linux darwin" -output="build/{{.Dir}}_{{.OS}}_{{.Arch}}"
 
-.PHONY: test clean build
+get:
+	go get github.com/tools/godep
+	godep restore ./...
+
+.PHONY: test clean build get
