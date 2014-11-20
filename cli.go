@@ -31,7 +31,7 @@ import (
 	"syscall"
 )
 
-var VERSION = "v0.8.1"
+var VERSION = "v0.8.2"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 

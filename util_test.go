@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/codegangsta/cli"
 	"github.com/stretchr/testify/assert"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -73,6 +74,16 @@ func TestDownloadFromUrl(t *testing.T) {
 
 func TestAbsExePath(t *testing.T) {
 	path, err := absExePath("ls")
+	assert.Nil(t, err)
+	assert.Equal(t, path, "/bin/ls")
+
+	// should follow symlic
+	temp, err := ioutil.TempDir(os.TempDir(), "git-hooks-test")
+	assert.Nil(t, err)
+	os.Setenv("PATH", temp+":$PATH")
+	err = os.Symlink("/bin/ls", filepath.Join(temp, "ls"))
+	assert.Nil(t, err)
+	path, err = absExePath("ls")
 	assert.Nil(t, err)
 	assert.Equal(t, path, "/bin/ls")
 }

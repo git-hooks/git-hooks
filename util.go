@@ -95,11 +95,22 @@ func absExePath(exe string) (name string, err error) {
 
 	if name[0] == '.' {
 		name, err = filepath.Abs(name)
-		if err == nil {
+		if err != nil {
 			name = filepath.Clean(name)
 		}
 	} else {
 		name, err = exec.LookPath(filepath.Clean(name))
+	}
+	if err != nil {
+		return
+	}
+	// follow symlink
+	fileinfo, err := os.Lstat(name)
+	if err != nil {
+		return
+	}
+	if fileinfo.Mode()&os.ModeSymlink != 0 {
+		name, err = os.Readlink(name)
 	}
 	return
 }
