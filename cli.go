@@ -31,11 +31,11 @@ import (
 	"syscall"
 )
 
-var VERSION = "v0.7.5"
+var VERSION = "v0.8.0"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
-var CONTRIB_PATH = ".hooks"
+var CONTRIB_DIRNAME = "githooks"
 
 var tplPreInstall = `#!/usr/bin/env bash
 echo \"git hooks not installed in this repository.  Run 'git hooks --install' to install it or 'git hooks -h' for more information.\"`
@@ -297,11 +297,15 @@ func run(cmds ...string) {
 	}
 
 	// find contrib directory
-	home, err := homedir.Dir()
-	contrib := CONTRIB_PATH
-	if err == nil {
-		contrib = filepath.Join(home, CONTRIB_PATH)
+	contrib, err := gitExec("config --get --system hooks.contrib")
+	if err != nil {
+		contrib = "/usr/local/lib"
 	}
+	if isExist, _ := exists(contrib); !isExist {
+		contrib = "/usr/local/lib"
+		logger.Warnln("Contrib directory don't exist, use " + contrib)
+	}
+	contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
 	for _, configPath := range hookConfigs() {
 		config, err := listHooksInConfig(configPath)
 		if err == nil {
