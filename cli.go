@@ -31,11 +31,11 @@ import (
 	"syscall"
 )
 
-var VERSION = "v0.8.0"
+var VERSION = "v0.8.1"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
-var CONTRIB_DIRNAME = "githooks"
+var CONTRIB_DIRNAME = "githooks-contrib"
 
 var tplPreInstall = `#!/usr/bin/env bash
 echo \"git hooks not installed in this repository.  Run 'git hooks --install' to install it or 'git hooks -h' for more information.\"`
@@ -297,15 +297,19 @@ func run(cmds ...string) {
 	}
 
 	// find contrib directory
-	contrib, err := gitExec("config --get --system hooks.contrib")
-	if err != nil {
-		contrib = "/usr/local/lib"
+	contrib, err := gitExec("config --get hooks.contrib")
+	isExist, _ := exists(contrib)
+	if err != nil || !isExist {
+		// default to use ~/.githooks-contrib
+		home, err := homedir.Dir()
+		if err != nil {
+			// fallback
+			home = "~"
+		}
+		contrib = filepath.Join(home, "."+CONTRIB_DIRNAME)
+	} else {
+		contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
 	}
-	if isExist, _ := exists(contrib); !isExist {
-		contrib = "/usr/local/lib"
-		logger.Warnln("Contrib directory don't exist, use " + contrib)
-	}
-	contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
 	for _, configPath := range hookConfigs() {
 		config, err := listHooksInConfig(configPath)
 		if err == nil {
@@ -318,6 +322,8 @@ func run(cmds ...string) {
 							logger.Infoln("Cloning repo " + repoName)
 							_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
 							if err != nil {
+								fmt.Printf("clone https://%s %s", repoName, filepath.Join(contrib, repoName))
+								fmt.Println(err.Error())
 								continue
 							}
 						}
