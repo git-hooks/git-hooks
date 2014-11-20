@@ -3,7 +3,7 @@
         "github.com/git-hooks/contrib": [
             "golint",
             "whitespace",
-            "bash_syntax"
+            "bashlint"
         ]
     }
 }
