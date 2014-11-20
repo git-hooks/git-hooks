@@ -49,6 +49,7 @@ func main() {
 	app.Name = NAME
 	app.Usage = "tool to manage project, user, and global Git hooks"
 	app.Version = VERSION
+	app.EnableBashCompletion = true
 	app.Action = bind(list)
 	app.Commands = []cli.Command{
 		{
