@@ -1,7 +1,9 @@
 package main
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"github.com/codegangsta/cli"
 	"io"
 	"io/ioutil"
@@ -62,16 +64,16 @@ func exists(path string) (bool, error) {
 
 // Download file from url.
 // Downloaded file stored in temporary directory
-func downloadFromUrl(url string) (file *os.File, err error) {
+func downloadFromUrl(url string) (fileName string, err error) {
 	debug("Downloading %s", url)
 
-	file, err = ioutil.TempFile(os.TempDir(), NAME)
-	fileName := file.Name()
-	output, err := os.Create(fileName)
+	file, err := ioutil.TempFile(os.TempDir(), NAME)
 	if err != nil {
 		return
 	}
-	defer output.Close()
+	defer file.Close()
+
+	fileName = file.Name()
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -79,13 +81,53 @@ func downloadFromUrl(url string) (file *os.File, err error) {
 	}
 	defer response.Body.Close()
 
-	n, err := io.Copy(output, response.Body)
+	n, err := io.Copy(file, response.Body)
 	if err != nil {
 		return
 	}
 
 	debug("Download success")
 	debug("%n bytes downloaded.", n)
+	return
+}
+
+func extract(fileName string) (tmpFileName string, err error) {
+	file, err := ioutil.TempFile(os.TempDir(), NAME)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	tmpFileName = file.Name()
+
+	targz, err := os.Open(fileName)
+	if err != nil {
+		return
+	}
+	defer targz.Close()
+
+	gr, err := gzip.NewReader(targz)
+	if err != nil {
+		return
+	}
+	defer gr.Close()
+
+	tr := tar.NewReader(gr)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return tmpFileName, err
+		}
+		if hdr.Typeflag != tar.TypeDir {
+			_, err = io.Copy(file, tr)
+			if err != nil {
+				return tmpFileName, err
+			}
+		}
+	}
 	return
 }
 

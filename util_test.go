@@ -16,19 +16,19 @@ import (
 func TestGetGitRoot(t *testing.T) {
 	root, err := getGitRepoRoot()
 	assert.Nil(t, err)
-	assert.Equal(t, filepath.Base(root), "git-hooks")
+	assert.Equal(t, "git-hooks", filepath.Base(root))
 }
 
 func TestGetDirPath(t *testing.T) {
 	path, err := getGitDirPath()
 	assert.Nil(t, err)
-	assert.Equal(t, filepath.Base(path), ".git")
+	assert.Equal(t, ".git", filepath.Base(path))
 }
 
 func TestGitExec(t *testing.T) {
 	identity, err := gitExec("rev-list --max-parents=0 HEAD")
 	assert.Nil(t, err)
-	assert.Equal(t, identity, "553ec650fd4f90003774e2ff00b10bc9aa9ec802")
+	assert.Equal(t, "553ec650fd4f90003774e2ff00b10bc9aa9ec802", identity)
 }
 
 func TestBind(t *testing.T) {
@@ -37,7 +37,7 @@ func TestBind(t *testing.T) {
 		sum = a + b
 	}, 1, 2)
 	f(&cli.Context{})
-	assert.Equal(t, sum, 3)
+	assert.Equal(t, 3, sum)
 }
 
 func TestExists(t *testing.T) {
@@ -60,7 +60,10 @@ func TestDownloadFromUrl(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	file, err := downloadFromUrl(ts.URL)
+	fileName, err := downloadFromUrl(ts.URL)
+	assert.Nil(t, err)
+
+	file, err := os.Open(fileName)
 	assert.Nil(t, err)
 
 	fileinfo, err := file.Stat()
@@ -72,10 +75,27 @@ func TestDownloadFromUrl(t *testing.T) {
 	assert.Equal(t, string(b), content)
 }
 
+func TestExtract(t *testing.T) {
+	fileName, err := extract("./fixtures/test.tar.gz")
+	assert.Nil(t, err)
+
+	file, err := os.Open(fileName)
+	assert.Nil(t, err)
+
+	fileinfo, err := file.Stat()
+	assert.Nil(t, err)
+
+	bytes := make([]byte, fileinfo.Size())
+	_, err = file.Read(bytes)
+	assert.Nil(t, err)
+	// vim store the file with extra newline at the EOF
+	assert.Equal(t, "test\n", string(bytes))
+}
+
 func TestAbsExePath(t *testing.T) {
 	path, err := absExePath("ls")
 	assert.Nil(t, err)
-	assert.Equal(t, path, "/bin/ls")
+	assert.Equal(t, "/bin/ls", path)
 
 	// should follow symlic
 	temp, err := ioutil.TempDir(os.TempDir(), "git-hooks-test")
@@ -85,7 +105,7 @@ func TestAbsExePath(t *testing.T) {
 	assert.Nil(t, err)
 	path, err = absExePath("ls")
 	assert.Nil(t, err)
-	assert.Equal(t, path, "/bin/ls")
+	assert.Equal(t, "/bin/ls", path)
 }
 
 func TestIsExecutable(t *testing.T) {
