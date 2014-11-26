@@ -18,5 +18,5 @@ func TestInstall(t *testing.T) {
 	if msg, ok := err.(*exec.ExitError); ok {
 		status = msg.Sys().(syscall.WaitStatus).ExitStatus()
 	}
-	assert.Equal(t, status, 1)
+	assert.Equal(t, 1, status)
 }

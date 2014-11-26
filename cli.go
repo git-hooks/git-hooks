@@ -17,17 +17,6 @@ import (
 	"syscall"
 )
 
-var VERSION = "v0.9.0"
-var NAME = "git-hooks"
-var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
-
-var CONTRIB_DIRNAME = "githooks-contrib"
-
-var tplPreInstall = `#!/usr/bin/env bash
-echo \"git hooks not installed in this repository.  Run 'git hooks --install' to install it or 'git hooks -h' for more information.\"`
-var tplPostInstall = `#!/usr/bin/env bash
-git-hooks run "$0" "$@"`
-
 var debug = Debug("main")
 
 func main() {
@@ -202,11 +191,11 @@ func update() {
 	// compare version
 	current, err := semver.New(VERSION[1:])
 	if err != nil {
-		logger.Errorln("Semver parse error " + err.Error())
+		logger.Errorln("Semver parse error ", err)
 	}
 	latest, err := semver.New(version[1:])
 	if err != nil {
-		logger.Errorln("Semver parse error " + err.Error())
+		logger.Errorln("Semver parse error ", err)
 	}
 	debug("Current version %s, latest version %s", current, latest)
 
@@ -215,35 +204,50 @@ func update() {
 		target := fmt.Sprintf("git-hooks_%s_%s", runtime.GOOS, runtime.GOARCH)
 		for _, asset := range release.Assets {
 			if *asset.Name == target {
-				file, err := downloadFromUrl(*asset.BrowserDownloadUrl)
+				// download
+				tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
 				if err != nil {
-					logger.Errorln("Download error", err.Error())
+					logger.Errorln("Download error", err)
 				}
 				logger.Infoln("Download complete")
 
-				// replace current version
-				file.Chmod(0755)
-				name, err := absExePath(os.Args[0])
+				// uncompress
+				tmpFileName, err = extract(tmpFileName)
 				if err != nil {
-					logger.Errorln(err.Error())
+					logger.Errorln("Download error", err)
+				}
+				logger.Infoln("Extract complete")
+
+				// replace current version
+				fileName, err := absExePath(os.Args[0])
+				if err != nil {
+					logger.Errorln(err)
 				}
 
-				debug("Replace %s with temp file %s", name, file.Name())
-				out, err := os.Create(name)
+				debug("Replace %s with temp file %s", fileName, tmpFileName)
+				out, err := os.Create(fileName)
 				if err != nil {
-					logger.Errorln("Create error " + err.Error())
+					logger.Errorln("Create error ", err)
 				}
 				defer out.Close()
-				in, err := os.Open(file.Name())
+
+				err = out.Chmod(0755)
 				if err != nil {
-					logger.Errorln("Open error " + err.Error())
+					logger.Errorln("Create error ", err)
+				}
+
+				in, err := os.Open(tmpFileName)
+				if err != nil {
+					logger.Errorln("Open error ", err)
 				}
 				defer in.Close()
+
 				_, err = io.Copy(out, in)
 				if err != nil {
-					logger.Errorln("Copy error " + err.Error())
+					logger.Errorln("Copy error ", err)
 				}
 				logger.Infoln(NAME + " update to " + version)
+
 				break
 			}
 		}
@@ -255,7 +259,7 @@ func update() {
 func identity() {
 	identity, err := gitExec("rev-list --max-parents=0 HEAD")
 	if err != nil {
-		logger.Errorln(err.Error())
+		logger.Errorln(err)
 	}
 
 	logger.Infoln(identity)
@@ -274,7 +278,7 @@ func run(cmds ...string) {
 					for _, hook := range hooks {
 						status, err := runHook(filepath.Join(dir, trigger, hook), args...)
 						if err != nil {
-							logger.Errorsln(status, err.Error())
+							logger.Errorsln(status, err)
 						}
 					}
 				}
@@ -309,7 +313,7 @@ func run(cmds ...string) {
 							_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
 							if err != nil {
 								fmt.Printf("clone https://%s %s", repoName, filepath.Join(contrib, repoName))
-								fmt.Println(err.Error())
+								fmt.Println(err)
 								continue
 							}
 						}
@@ -317,7 +321,7 @@ func run(cmds ...string) {
 						for _, hook := range hooks {
 							status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
 							if err != nil {
-								logger.Errorsln(status, err.Error())
+								logger.Errorsln(status, err)
 							}
 						}
 					}
