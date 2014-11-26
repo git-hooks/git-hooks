@@ -1,17 +1,3 @@
-/*
-Terminology
-
-Example git-hooks directory layout:
-
-	githooks
-	├── commit-msg
-	│   └── signed-off-by
-	└── pre-commit
-		└── bsd
-
-trigger: pre-commit
-hook: bsd
-*/
 package main
 
 import (
@@ -31,7 +17,7 @@ import (
 	"syscall"
 )
 
-var VERSION = "v0.8.2"
+var VERSION = "v0.9.0"
 var NAME = "git-hooks"
 var TRIGGERS = [...]string{"applypatch-msg", "commit-msg", "post-applypatch", "post-checkout", "post-commit", "post-merge", "post-receive", "pre-applypatch", "pre-auto-gc", "pre-commit", "prepare-commit-msg", "pre-rebase", "pre-receive", "update", "pre-push"}
 
@@ -329,7 +315,7 @@ func run(cmds ...string) {
 						}
 						// execute hook
 						for _, hook := range hooks {
-							status, err := runHook(filepath.Join(contrib, repoName, hook, "hook"), args...)
+							status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
 							if err != nil {
 								logger.Errorsln(status, err.Error())
 							}
