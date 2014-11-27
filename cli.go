@@ -199,60 +199,69 @@ func update() {
 	}
 	debug("Current version %s, latest version %s", current, latest)
 
-	if latest.GT(current) {
-		logger.Infoln("Download latest version...")
-		target := fmt.Sprintf("git-hooks_%s_%s", runtime.GOOS, runtime.GOARCH)
-		for _, asset := range release.Assets {
-			if *asset.Name == target {
-				// download
-				tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
-				if err != nil {
-					logger.Errorln("Download error", err)
-				}
-				logger.Infoln("Download complete")
-
-				// uncompress
-				tmpFileName, err = extract(tmpFileName)
-				if err != nil {
-					logger.Errorln("Download error", err)
-				}
-				logger.Infoln("Extract complete")
-
-				// replace current version
-				fileName, err := absExePath(os.Args[0])
-				if err != nil {
-					logger.Errorln(err)
-				}
-
-				debug("Replace %s with temp file %s", fileName, tmpFileName)
-				out, err := os.Create(fileName)
-				if err != nil {
-					logger.Errorln("Create error ", err)
-				}
-				defer out.Close()
-
-				err = out.Chmod(0755)
-				if err != nil {
-					logger.Errorln("Create error ", err)
-				}
-
-				in, err := os.Open(tmpFileName)
-				if err != nil {
-					logger.Errorln("Open error ", err)
-				}
-				defer in.Close()
-
-				_, err = io.Copy(out, in)
-				if err != nil {
-					logger.Errorln("Copy error ", err)
-				}
-				logger.Infoln(NAME + " update to " + version)
-
-				break
-			}
-		}
-	} else {
+	if !latest.GT(current) {
 		logger.Infoln("Your " + NAME + " is update to date")
+		return
+	}
+
+	// version compability
+	if latest.Major != current.Major {
+		logger.Infoln("Current version is ", current)
+		logger.Infoln("Latest version is ", latest)
+		logger.Infoln("Version incompatible, manually update please")
+		return
+	}
+
+	logger.Infoln("Download latest version...")
+	target := fmt.Sprintf("git-hooks_%s_%s", runtime.GOOS, runtime.GOARCH)
+	for _, asset := range release.Assets {
+		if *asset.Name == target {
+			// download
+			tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
+			if err != nil {
+				logger.Errorln("Download error", err)
+			}
+			logger.Infoln("Download complete")
+
+			// uncompress
+			tmpFileName, err = extract(tmpFileName)
+			if err != nil {
+				logger.Errorln("Download error", err)
+			}
+			logger.Infoln("Extract complete")
+
+			// replace current version
+			fileName, err := absExePath(os.Args[0])
+			if err != nil {
+				logger.Errorln(err)
+			}
+
+			debug("Replace %s with temp file %s", fileName, tmpFileName)
+			out, err := os.Create(fileName)
+			if err != nil {
+				logger.Errorln("Create error ", err)
+			}
+			defer out.Close()
+
+			err = out.Chmod(0755)
+			if err != nil {
+				logger.Errorln("Create error ", err)
+			}
+
+			in, err := os.Open(tmpFileName)
+			if err != nil {
+				logger.Errorln("Open error ", err)
+			}
+			defer in.Close()
+
+			_, err = io.Copy(out, in)
+			if err != nil {
+				logger.Errorln("Copy error ", err)
+			}
+			logger.Infoln(NAME + " update to " + version)
+
+			break
+		}
 	}
 }
 
