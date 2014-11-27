@@ -213,7 +213,7 @@ func update() {
 	}
 
 	logger.Infoln("Download latest version...")
-	target := fmt.Sprintf("git-hooks_%s_%s", runtime.GOOS, runtime.GOARCH)
+	target := fmt.Sprintf("git-hooks_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	for _, asset := range release.Assets {
 		if *asset.Name == target {
 			// download
