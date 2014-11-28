@@ -1,3 +1,6 @@
 build
 Godeps/_workspace
 Godeps/Readme
+
+Vagrantfile
+.vagrant
