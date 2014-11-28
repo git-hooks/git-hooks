@@ -73,49 +73,69 @@ func main() {
 
 // List directory base hooks and configuration file based hooks
 func list() {
-	root, err := getGitRepoRoot()
+	installed, err := isInstalled()
 	if err != nil {
 		logger.Infoln("Current directory is not a git repo")
+	} else if installed {
+		logger.Infoln("Git hooks ARE installed in this repository.")
 	} else {
-		preCommitHook := filepath.Join(root, ".git/hooks/pre-commit")
-		hook, err := ioutil.ReadFile(preCommitHook)
-		if err == nil && strings.EqualFold(string(hook), tplPostInstall) {
-			logger.Infoln("Git hooks ARE installed in this repository.")
-		} else {
-			logger.Infoln("Git hooks are NOT installed in this repository. (Run 'git hooks install' to install it)")
-		}
+		logger.Infoln("Git hooks are NOT installed in this repository. (Run 'git hooks install' to install it)")
 	}
 
 	for scope, dir := range hookDirs() {
 		logger.Infoln(scope + " hooks")
+
 		config, err := listHooksInDir(scope, dir)
-		if err == nil {
-			for trigger, hooks := range config {
-				logger.Infoln("  " + trigger)
-				for _, hook := range hooks {
-					logger.Infoln("    - " + hook)
-				}
-			}
-			logger.Infoln()
+		if err != nil {
+			continue
 		}
+
+		for trigger, hooks := range config {
+			logger.Infoln("  " + trigger)
+
+			for _, hook := range hooks {
+				logger.Infoln("    - " + hook)
+			}
+		}
+		logger.Infoln()
 	}
 
 	logger.Infoln("Community hooks")
 	for scope, configPath := range hookConfigs() {
 		logger.Infoln(scope + " hooks")
+
 		config, err := listHooksInConfig(configPath)
-		if err == nil {
-			for trigger, repo := range config {
-				logger.Infoln("  " + trigger)
-				for repoName, hooks := range repo {
-					logger.Infoln("  " + repoName)
-					for _, hook := range hooks {
-						logger.Infoln("    - " + hook)
-					}
+		if err != nil {
+			continue
+		}
+
+		for trigger, repo := range config {
+			logger.Infoln("  " + trigger)
+
+			for repoName, hooks := range repo {
+				logger.Infoln("  " + repoName)
+
+				for _, hook := range hooks {
+					logger.Infoln("    - " + hook)
 				}
 			}
 		}
 	}
+}
+
+// If git-hooks installed in the current git repo
+func isInstalled() (installed bool, err error) {
+	installed = false
+
+	root, err := getGitRepoRoot()
+	if err != nil {
+		return
+	}
+
+	preCommitHook := filepath.Join(root, ".git/hooks/pre-commit")
+	hook, err := ioutil.ReadFile(preCommitHook)
+	installed = err == nil && strings.EqualFold(string(hook), tplPostInstall)
+	return
 }
 
 // Install git-hook into current git repo
@@ -123,18 +143,21 @@ func install(isInstall bool) {
 	dirPath, err := getGitDirPath()
 	if err != nil {
 		logger.Errorln("Current directory is not a git repo")
+		return
 	}
 
 	if isInstall {
 		isExist, _ := exists(filepath.Join(dirPath, "hooks.old"))
 		if isExist {
 			logger.Errorln("@rhooks.old already exists, perhaps you already installed?")
+			return
 		}
 		installInto(dirPath, tplPostInstall)
 	} else {
 		isExist, _ := exists(filepath.Join(dirPath, "hooks.old"))
 		if !isExist {
 			logger.Errorln("Error, hooks.old doesn't exists, aborting uninstall to not destroy something")
+			return
 		}
 		os.RemoveAll(filepath.Join(dirPath, "hooks"))
 		os.Rename(filepath.Join(dirPath, "hooks.old"), filepath.Join(dirPath, "hooks"))
@@ -154,6 +177,7 @@ func installGlobal() {
 	if err == nil {
 		templatedir = filepath.Join(home, templatedir)
 	}
+
 	isExist, _ := exists(templatedir)
 	if !isExist {
 		defaultdir := "/usr/share/git-core/templates"
@@ -192,10 +216,13 @@ func update() {
 	current, err := semver.New(VERSION[1:])
 	if err != nil {
 		logger.Errorln("Semver parse error ", err)
+		return
 	}
+
 	latest, err := semver.New(version[1:])
 	if err != nil {
 		logger.Errorln("Semver parse error ", err)
+		return
 	}
 	debug("Current version %s, latest version %s", current, latest)
 
@@ -214,54 +241,64 @@ func update() {
 
 	logger.Infoln("Download latest version...")
 	target := fmt.Sprintf("git-hooks_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
+
 	for _, asset := range release.Assets {
-		if *asset.Name == target {
-			// download
-			tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
-			if err != nil {
-				logger.Errorln("Download error", err)
-			}
-			logger.Infoln("Download complete")
-
-			// uncompress
-			tmpFileName, err = extract(tmpFileName)
-			if err != nil {
-				logger.Errorln("Download error", err)
-			}
-			logger.Infoln("Extract complete")
-
-			// replace current version
-			fileName, err := absExePath(os.Args[0])
-			if err != nil {
-				logger.Errorln(err)
-			}
-
-			debug("Replace %s with temp file %s", fileName, tmpFileName)
-			out, err := os.Create(fileName)
-			if err != nil {
-				logger.Errorln("Create error ", err)
-			}
-			defer out.Close()
-
-			err = out.Chmod(0755)
-			if err != nil {
-				logger.Errorln("Create error ", err)
-			}
-
-			in, err := os.Open(tmpFileName)
-			if err != nil {
-				logger.Errorln("Open error ", err)
-			}
-			defer in.Close()
-
-			_, err = io.Copy(out, in)
-			if err != nil {
-				logger.Errorln("Copy error ", err)
-			}
-			logger.Infoln(NAME + " update to " + version)
-
-			break
+		if *asset.Name != target {
+			continue
 		}
+
+		// download
+		tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
+		if err != nil {
+			logger.Errorln("Download error", err)
+			return
+		}
+		logger.Infoln("Download complete")
+
+		// uncompress
+		tmpFileName, err = extract(tmpFileName)
+		if err != nil {
+			logger.Errorln("Download error", err)
+			return
+		}
+		logger.Infoln("Extract complete")
+
+		// replace current version
+		fileName, err := absExePath(os.Args[0])
+		if err != nil {
+			logger.Errorln(err)
+			return
+		}
+
+		debug("Replace %s with temp file %s", fileName, tmpFileName)
+		out, err := os.Create(fileName)
+		if err != nil {
+			logger.Errorln("Create error ", err)
+			return
+		}
+		defer out.Close()
+
+		err = out.Chmod(0755)
+		if err != nil {
+			logger.Errorln("Create error ", err)
+			return
+		}
+
+		in, err := os.Open(tmpFileName)
+		if err != nil {
+			logger.Errorln("Open error ", err)
+			return
+		}
+		defer in.Close()
+
+		_, err = io.Copy(out, in)
+		if err != nil {
+			logger.Errorln("Copy error ", err)
+			return
+		}
+		logger.Infoln(NAME + " update to " + version)
+
+		break
 	}
 }
 
@@ -269,6 +306,7 @@ func identity() {
 	identity, err := gitExec("rev-list --max-parents=0 HEAD")
 	if err != nil {
 		logger.Errorln(err)
+		return
 	}
 
 	logger.Infoln(identity)
@@ -277,48 +315,50 @@ func identity() {
 // run(trigger string, args ...string)
 // Execute trigger with supplied arguments.
 func run(cmds ...string) {
-	t := filepath.Base(cmds[0])
+	trigger := filepath.Base(cmds[0])
 	args := cmds[1:]
+
+	runDirHooks(trigger, args...)
+	runContribHooks(trigger, args...)
+}
+
+func runDirHooks(trigger string, args ...string) {
 	for scope, dir := range hookDirs() {
 		config, err := listHooksInDir(scope, dir)
 		if err != nil {
 			continue
 		}
-		for trigger, hooks := range config {
+
+		for t, hooks := range config {
 			// semi scope
-			if trigger == t || trigger == ("_"+t) {
-				for _, hook := range hooks {
-					status, err := runHook(filepath.Join(dir, trigger, hook), args...)
-					if err != nil {
-						logger.Errorsln(status, err)
-					}
+			if t != trigger && t != ("_"+trigger) {
+				continue
+			}
+			for _, hook := range hooks {
+				status, err := runHook(filepath.Join(dir, t, hook), args...)
+				if err != nil {
+					logger.Errorsln(status, err)
+					return
 				}
 			}
 		}
 	}
+}
 
-	// find contrib directory
-	contrib, err := gitExec("config --get hooks.contrib")
-	isExist, _ := exists(contrib)
-	if err != nil || !isExist {
-		// default to use ~/.githooks-contrib
-		home, err := homedir.Dir()
-		if err != nil {
-			// fallback
-			home = "~"
-		}
-		contrib = filepath.Join(home, "."+CONTRIB_DIRNAME)
-	} else {
-		contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
-	}
+func runContribHooks(trigger string, args ...string) {
+	contrib := getContribDir()
+
+	// wether contrib repo updated
+	updated := false
+
 	for _, configPath := range hookConfigs() {
 		config, err := listHooksInConfig(configPath)
 		if err != nil {
 			continue
 		}
 
-		for trigger, repo := range config {
-			if trigger != t {
+		for t, repo := range config {
+			if t != trigger {
 				continue
 			}
 
@@ -334,17 +374,30 @@ func run(cmds ...string) {
 						continue
 					}
 				}
+
 				// execute hook
-				for _, hook := range hooks {
+				for index := 0; index < len(hooks); index++ {
+					hook := hooks[index]
+
 					status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
 					if err == nil {
+						// skip update if everything ok
 						continue
 					}
-					//if msg, ok := err.(*exec.ExitError); ok {
-					//// try to update contrib repo
-					//// TODO
-					//}
-					debug("%s", status)
+
+					if status == 126 && !updated {
+						// try to update contrib repo
+						logger.Infoln("Update community hooks")
+						updated = true
+
+						_, err := gitExecWithDir(filepath.Join(contrib, repoName), fmt.Sprintf("pull origin master"))
+						if err == nil {
+							index--
+							continue
+						}
+
+						logger.Warnln("There is something not right with your community hook repo")
+					}
 					logger.Errorsln(status, err)
 				}
 			}
@@ -352,10 +405,28 @@ func run(cmds ...string) {
 	}
 }
 
+// Find contrib directory
+func getContribDir() (contrib string) {
+	contrib, err := gitExec("config --get hooks.contrib")
+	isExist, _ := exists(contrib)
+	if err != nil || !isExist {
+		// default to use ~/.githooks-contrib
+		home, err := homedir.Dir()
+		if err != nil {
+			// fallback
+			home = "~"
+		}
+		contrib = filepath.Join(home, "."+CONTRIB_DIRNAME)
+	} else {
+		contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
+	}
+	return
+}
+
 // Execute specific hook with arguments
 // Return error message as out if error occured
 func runHook(hook string, args ...string) (status int, err error) {
-	debug("Execute contrib hook %s %s", hook, args)
+	debug("Execute hook %s %s", hook, args)
 
 	cmd := exec.Command(hook, args...)
 	cmd.Stdout = os.Stdout
@@ -366,18 +437,14 @@ func runHook(hook string, args ...string) (status int, err error) {
 			if waitStatus, ok := exiterr.Sys().(syscall.WaitStatus); ok {
 				return waitStatus.ExitStatus(), err
 			}
+		} else if _, ok := err.(*os.PathError); ok {
+			// Command can't be execute
+			// http://tldp.org/LDP/abs/html/exitcodes.html
+			return 126, err
 		} else {
-			if _, ok := err.(*os.PathError); ok {
-				// Command can't be execute
-				// http://tldp.org/LDP/abs/html/exitcodes.html
-				return 126, err
-			}
+			// exit status unknown
+			status = 255
 		}
-	}
-
-	if err != nil && status == 0 {
-		// exit status unknown
-		status = 255
 	}
 
 	return
