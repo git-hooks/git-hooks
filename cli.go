@@ -274,21 +274,23 @@ func identity() {
 	logger.Infoln(identity)
 }
 
-// Execute project, semi, user and global scope hooks
+// run(trigger string, args ...string)
+// Execute trigger with supplied arguments.
 func run(cmds ...string) {
 	t := filepath.Base(cmds[0])
 	args := cmds[1:]
 	for scope, dir := range hookDirs() {
 		config, err := listHooksInDir(scope, dir)
-		if err == nil {
-			for trigger, hooks := range config {
-				// semi scope
-				if trigger == t || trigger == ("_"+t) {
-					for _, hook := range hooks {
-						status, err := runHook(filepath.Join(dir, trigger, hook), args...)
-						if err != nil {
-							logger.Errorsln(status, err)
-						}
+		if err != nil {
+			continue
+		}
+		for trigger, hooks := range config {
+			// semi scope
+			if trigger == t || trigger == ("_"+t) {
+				for _, hook := range hooks {
+					status, err := runHook(filepath.Join(dir, trigger, hook), args...)
+					if err != nil {
+						logger.Errorsln(status, err)
 					}
 				}
 			}
@@ -311,29 +313,39 @@ func run(cmds ...string) {
 	}
 	for _, configPath := range hookConfigs() {
 		config, err := listHooksInConfig(configPath)
-		if err == nil {
-			for trigger, repo := range config {
-				if trigger == t {
-					for repoName, hooks := range repo {
-						// check if repo exist in local file system
-						isExist, _ := exists(filepath.Join(contrib, repoName))
-						if !isExist {
-							logger.Infoln("Cloning repo " + repoName)
-							_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
-							if err != nil {
-								fmt.Printf("clone https://%s %s", repoName, filepath.Join(contrib, repoName))
-								fmt.Println(err)
-								continue
-							}
-						}
-						// execute hook
-						for _, hook := range hooks {
-							status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
-							if err != nil {
-								logger.Errorsln(status, err)
-							}
-						}
+		if err != nil {
+			continue
+		}
+
+		for trigger, repo := range config {
+			if trigger != t {
+				continue
+			}
+
+			for repoName, hooks := range repo {
+				// check if repo exist in local file system
+				isExist, _ := exists(filepath.Join(contrib, repoName))
+				if !isExist {
+					logger.Infoln("Cloning repo " + repoName)
+					_, err := gitExec(fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName)))
+					if err != nil {
+						fmt.Printf("clone https://%s %s", repoName, filepath.Join(contrib, repoName))
+						fmt.Println(err)
+						continue
 					}
+				}
+				// execute hook
+				for _, hook := range hooks {
+					status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
+					if err == nil {
+						continue
+					}
+					//if msg, ok := err.(*exec.ExitError); ok {
+					//// try to update contrib repo
+					//// TODO
+					//}
+					debug("%s", status)
+					logger.Errorsln(status, err)
 				}
 			}
 		}
@@ -348,16 +360,27 @@ func runHook(hook string, args ...string) (status int, err error) {
 	cmd := exec.Command(hook, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err = cmd.Run()
 
-	if err != nil {
-		if msg, ok := err.(*exec.ExitError); ok {
-			status = msg.Sys().(syscall.WaitStatus).ExitStatus()
+	if err = cmd.Run(); err != nil {
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			if waitStatus, ok := exiterr.Sys().(syscall.WaitStatus); ok {
+				return waitStatus.ExitStatus(), err
+			}
+		} else {
+			if _, ok := err.(*os.PathError); ok {
+				// Command can't be execute
+				// http://tldp.org/LDP/abs/html/exitcodes.html
+				return 126, err
+			}
 		}
-	} else {
-		status = 0
 	}
-	return status, err
+
+	if err != nil && status == 0 {
+		// exit status unknown
+		status = 255
+	}
+
+	return
 }
 
 func installInto(dir string, template string) {
