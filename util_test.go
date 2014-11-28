@@ -31,6 +31,15 @@ func TestGitExec(t *testing.T) {
 	assert.Equal(t, "553ec650fd4f90003774e2ff00b10bc9aa9ec802", identity)
 }
 
+func TestGitExecWithDir(t *testing.T) {
+	wd, err := os.Getwd()
+	assert.Nil(t, err)
+
+	identity, err := gitExecWithDir(wd, "rev-list --max-parents=0 HEAD")
+	assert.Nil(t, err)
+	assert.Equal(t, "553ec650fd4f90003774e2ff00b10bc9aa9ec802", identity)
+}
+
 func TestBind(t *testing.T) {
 	sum := 0
 	f := bind(func(a, b int) {
