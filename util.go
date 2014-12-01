@@ -24,14 +24,19 @@ func getGitDirPath() (string, error) {
 }
 
 func gitExec(args ...string) (string, error) {
-	args = strings.Split(strings.Join(args, " "), " ")
 	wd, err := os.Getwd()
 	if err != nil {
 		return "", err
 	}
 
+	return gitExecWithDir(wd, args...)
+}
+
+func gitExecWithDir(dir string, args ...string) (string, error) {
+	args = strings.Split(strings.Join(args, " "), " ")
+
 	cmd := exec.Command("git", args...)
-	cmd.Dir = wd
+	cmd.Dir = dir
 
 	if out, err := cmd.Output(); err == nil {
 		return string(bytes.Trim(out, "\n")), nil
