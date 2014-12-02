@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Git-hooks by git-hooks</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Git-hooks</h1>
+        <p>Hook manager</p>
+        <p class="view"><a href="https://github.com/git-hooks/git-hooks">View the Project on GitHub <small>git-hooks/git-hooks</small></a></p>
+        <ul>
+          <li><a href="https://github.com/git-hooks/git-hooks/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/git-hooks/git-hooks/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/git-hooks/git-hooks">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <p>git-hooks is at a stage of able to manage client-side hooks, it will support server-side hooks future.</p>
+
+<p>git-hooks is a fork of <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a>, and <a href="http://benjamin-meyer.blogspot.jp/2010/06/managing-project-user-and-global-git.html">managing-project-user-and-global-git.html</a> tells much of what git-hooks pretend to do. Through, I will explain it with the new feature comes with git-hooks.</p>
+
+<h2>
+<a id="terminology" class="anchor" href="#terminology" aria-hidden="true"><span class="octicon octicon-link"></span></a>Terminology</h2>
+
+<ul>
+<li>git-hooks: The tool created by this repo</li>
+<li>trigger: Hook type such as pre-commit and commit-msg</li>
+<li>hook: Specific hook</li>
+<li>community hook: common used hook. In the source code of <code>git-hooks</code>, it also referred as <code>contrib</code> hook.</li>
+</ul>
+
+<h2>
+<a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p>Run <code>git hooks install</code> to tell a git repo to use git-hooks.</p>
+
+<p>Stop using git-hooks by <code>git hooks uninstall</code>.</p>
+
+<p>List all scope of hooks by execute <code>git hooks</code> directly. See below for what scope is.</p>
+
+<h2>
+<a id="scope" class="anchor" href="#scope" aria-hidden="true"><span class="octicon octicon-link"></span></a>Scope</h2>
+
+<p>git-hooks try to reduce hooks copy and symbolic link by properly manage them.</p>
+
+<p>Take pre-commit hook as an example, when git triggers pre-commit, git-hooks route the execution to <code>githooks</code> directory under the repo directory, <code>~/.githooks</code> directory under home directory and directory configured by <code>git config --set --system hooks.global</code>.</p>
+
+<p>These three directories are called <code>project</code> scope, <code>user</code> scope and <code>global</code> scope.</p>
+
+<p><code>project</code> scope hooks reside under repo directory, example layout is</p>
+
+<pre><code>some-project
+└── githooks
+    ├── commit-msg
+    │   └── check
+    │   └── check2
+    └── pre-commit
+        └── check
+        └── check2
+</code></pre>
+
+<p>When triggers pre-commit, all hooks under <code>githooks/pre-commit</code> will be executed.</p>
+
+<p>By <code>project</code> scope, we can add project related hooks into version control and separate them into multi files.</p>
+
+<p><code>user</code> scope hooks reside under home directory with the name of <code>.githooks</code>, the same directory structure as <code>project</code> scope hooks. It allow you to setup personal hooks for all your projects.</p>
+
+<pre><code>home
+└── someuser
+    └── .githooks
+        ├── commit-msg
+        │   └── check
+        │   └── check2
+        └── pre-commit
+            └── check
+            └── check2
+</code></pre>
+
+<p><code>global</code> scope hooks is configured via <code>hooks.global</code> entry in git system wide configuration file. When configured, it is possible for multi user in the same machine share the same hooks.</p>
+
+<pre><code>usr
+└── local
+    └── share
+        └── githooks
+            ├── commit-msg
+            │   └── check
+            │   └── check2
+            └── pre-commit
+                └── check
+                └── check2
+</code></pre>
+
+<p>And in git system configuration file (maybe /etc/gitconfig or /usr/local/etc/gitconfig, use <code>git config --system --set hooks.global</code> to setup)</p>
+
+<pre><code>[hooks]
+    global = /usr/local/share/githooks
+</code></pre>
+
+<p>Wait a minute, what if I want to have a hook for a particular project and particular user. It can't be added in version control and can't be added into <code>user</code> scope directory. The solution is <code>semi</code> scope.</p>
+
+<p><code>semi</code> scope actually reside inside <code>project</code> scope,</p>
+
+<pre><code>some-project
+└── githooks
+    ├── .gitignore
+    ├── _pre-commit
+    │   └── check
+    │   └── check2
+    ├── commit-msg
+    │   └── check
+    │   └── check2
+    └── pre-commit
+        └── check
+        └── check2
+</code></pre>
+
+<p>Actually when git triggers pre-commit, all hooks under <code>githooks/pre-commit</code> <strong>and</strong> <code>git-hooks/_pre-commit</code> will be executed.</p>
+
+<p>In order to setup hook as user related, <code>.gitignore</code> should be written as</p>
+
+<pre><code>_*
+</code></pre>
+
+<h2>
+<a id="community-hook" class="anchor" href="#community-hook" aria-hidden="true"><span class="octicon octicon-link"></span></a>Community hook</h2>
+
+<p>git-hooks differ from <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a> by enabling community hooks.</p>
+
+<p>Take pre-commit and <code>project</code> scope hooks as an example, when git triggers pre-commit, besides from scanning <code>githooks</code>, git-hooks also read <code>githooks.json</code>, example <code>githooks.json</code> is</p>
+
+<div class="highlight highlight-javascript"><pre>{
+    <span class="pl-s1"><span class="pl-pds">"</span>pre-commit<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+        <span class="pl-s1"><span class="pl-pds">"</span>github.com/git-hooks/contrib<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
+            <span class="pl-s1"><span class="pl-pds">"</span>bash_syntax<span class="pl-pds">"</span></span>,
+            <span class="pl-s1"><span class="pl-pds">"</span>jshint<span class="pl-pds">"</span></span>
+        ]
+    }
+}</pre></div>
+
+<p>Hooks under <code>"pre-commit"</code> field will be executed, it is organized as git repo, the repo will be clone into <code>~/.githooks-contrib</code> directory under your home directory if it's not yet exists.</p>
+
+<p>See <a href="https://github.com/git-hooks/git-hooks/wiki/Community-hooks">Community hooks</a> for more info.</p>
+
+<p><img src="assets/xmind.png" alt="xmind"></p>
+      </section>
+    </div>
+    <footer>
+      <p>Project maintained by <a href="https://github.com/git-hooks">git-hooks</a></p>
+      <p>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></p>
+    </footer>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-41494270-3");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+  </body>
+</html>
