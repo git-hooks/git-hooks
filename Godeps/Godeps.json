@@ -4,8 +4,8 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/blang/semver",
-			"Comment": "v1.0.4-2-gb1824b9",
-			"Rev": "b1824b988f6f3762cd7e5bc3b3582e743f87597c"
+			"Comment": "v2.0.2-1-g42513fe",
+			"Rev": "42513fed745c7859649fb4a533e768e532eee2df"
 		},
 		{
 			"ImportPath": "github.com/cattail/go-exclude",
@@ -13,12 +13,12 @@
 		},
 		{
 			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-26-gf7ebb76",
-			"Rev": "f7ebb761e83e21225d1d8954fde853bf8edd46c4"
+			"Comment": "1.2.0-62-gbf4a526",
+			"Rev": "bf4a526f48af7badd25d2cb02d587e1b01be3b50"
 		},
 		{
 			"ImportPath": "github.com/google/go-github/github",
-			"Rev": "5257f706765dede9b127e247327e55b3a89ccc1e"
+			"Rev": "845773f8647cad81ce430e0b903e8818d356e317"
 		},
 		{
 			"ImportPath": "github.com/google/go-querystring/query",

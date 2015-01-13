@@ -124,6 +124,7 @@ func list() {
 }
 
 // If git-hooks installed in the current git repo
+// If current directory is not a git repo, err will be not `nil`
 func isInstalled() (installed bool, err error) {
 	installed = false
 
@@ -133,8 +134,8 @@ func isInstalled() (installed bool, err error) {
 	}
 
 	preCommitHook := filepath.Join(root, ".git/hooks/pre-commit")
-	hook, err := ioutil.ReadFile(preCommitHook)
-	installed = err == nil && strings.EqualFold(string(hook), tplPostInstall)
+	hook, readErr := ioutil.ReadFile(preCommitHook)
+	installed = readErr == nil && strings.EqualFold(string(hook), tplPostInstall)
 	return
 }
 
