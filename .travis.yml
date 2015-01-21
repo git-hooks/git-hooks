@@ -1,5 +1,7 @@
 language: go
 go:
     - '1.3'
+git:
+    depth: 10000
 install: make get
 script: make test
