@@ -316,6 +316,10 @@ func identity() {
 // run(trigger string, args ...string)
 // Execute trigger with supplied arguments.
 func run(cmds ...string) {
+	if len(cmds) == 0 {
+		logger.Warnln("Missing trigger")
+		return
+	}
 	trigger := filepath.Base(cmds[0])
 	args := cmds[1:]
 
