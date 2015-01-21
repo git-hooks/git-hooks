@@ -30,22 +30,22 @@ func main() {
 		{
 			Name:      "install",
 			ShortName: "i",
-			Usage:     "Tell repo to use git-hooks by replace existing hooks with a call to git-hooks. Old hooks will be reserved in hooks.old",
+			Usage:     "Install git-hooks in this repo",
 			Action:    bind(install, true),
 		},
 		{
 			Name:   "uninstall",
-			Usage:  "Stop using git-hooks and restore old hooks",
+			Usage:  "Restore previous hooks",
 			Action: bind(uninstall),
 		},
 		{
 			Name:   "install-global",
-			Usage:  "Whenever a git repository is created or cloned user will be remind to install git-hooks",
+			Usage:  "Install git-hooks in global. Future initialized repo will install git-hooks by default",
 			Action: bind(installGlobal),
 		},
 		{
 			Name:   "uninstall-global",
-			Usage:  "Turn off the global reminder",
+			Usage:  "Uninstall global git-hooks",
 			Action: bind(uninstallGlobal),
 		},
 		{
@@ -55,7 +55,7 @@ func main() {
 		},
 		{
 			Name:  "run",
-			Usage: "Run hooks",
+			Usage: "Run particular hooks",
 			Action: func(c *cli.Context) {
 				run(c.Args()...)
 			},
