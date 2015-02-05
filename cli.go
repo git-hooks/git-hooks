@@ -249,7 +249,7 @@ func update() {
 		}
 
 		// download
-		tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadUrl)
+		tmpFileName, err := downloadFromUrl(*asset.BrowserDownloadURL)
 		if err != nil {
 			logger.Errorln("Download error", err)
 			return
