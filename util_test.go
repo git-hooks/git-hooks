@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
@@ -53,12 +52,6 @@ func TestExists(t *testing.T) {
 	isExist, err := exists("notExistFileName")
 	assert.Nil(t, err)
 	assert.False(t, isExist)
-	// THIS file is exist
-	_, filename, _, ok := runtime.Caller(1)
-	assert.True(t, ok)
-	isExist, err = exists(filename)
-	assert.Nil(t, err)
-	assert.True(t, isExist)
 }
 
 func TestDownloadFromUrl(t *testing.T) {
