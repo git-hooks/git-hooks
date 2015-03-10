@@ -1,55 +1,78 @@
 package main
 
 import (
+	"fmt"
 	"github.com/wsxiaoys/terminal/color"
 	"os"
 )
 
-var logger = struct {
-	Error    func(...interface{})
-	Errors   func(int, ...interface{})
-	Warn     func(...interface{})
-	Info     func(...interface{})
-	Errorln  func(...interface{})
-	Errorsln func(int, ...interface{})
-	Warnln   func(...interface{})
-	Infoln   func(...interface{})
-}{
-	Error:    Error,
-	Errors:   Errors,
-	Warn:     Warn,
-	Info:     Info,
-	Errorln:  Errorln,
-	Errorsln: Errorsln,
-	Warnln:   Warnln,
-	Infoln:   Infoln,
+type Logger struct {
+	errors []interface{}
+	infos  []interface{}
+	warns  []interface{}
 }
 
-func Error(msgs ...interface{}) {
-	Errors(1, msgs...)
+func (logger *Logger) Error(msgs ...interface{}) {
+	logger.Errors(1, msgs...)
 }
 
-func Errors(status int, msgs ...interface{}) {
+func (logger *Logger) Errors(status int, msgs ...interface{}) {
+	if isTestEnv() {
+		logger.errors = append(logger.errors, msgs...)
+		return
+	}
+
 	msgs = append([]interface{}{"@r"}, msgs...)
 	color.Print(msgs...)
 	os.Exit(status)
 }
-func Warn(msgs ...interface{}) {
+
+func (logger *Logger) Warn(msgs ...interface{}) {
+	if isTestEnv() {
+		logger.warns = append(logger.warns, msgs...)
+		return
+	}
+
 	msgs = append([]interface{}{"@y"}, msgs...)
 	color.Print(msgs...)
 }
-func Info(msgs ...interface{}) {
+
+func (logger *Logger) Info(msgs ...interface{}) {
+	if isTestEnv() {
+		logger.infos = append(logger.infos, msgs...)
+		return
+	}
+
 	color.Print(msgs...)
 }
-func Errorln(msgs ...interface{}) {
-	Errorsln(1, msgs...)
+
+func (logger *Logger) Errorln(msgs ...interface{}) {
+	logger.Errorsln(1, msgs...)
 }
-func Errorsln(status int, msgs ...interface{}) {
-	Errors(status, append(msgs, "\n")...)
+
+func (logger *Logger) Errorsln(status int, msgs ...interface{}) {
+	logger.Errors(status, append(msgs, "\n")...)
 }
-func Warnln(msgs ...interface{}) {
-	Warn(append(msgs, "\n")...)
+
+func (logger *Logger) Warnln(msgs ...interface{}) {
+	logger.Warn(append(msgs, "\n")...)
 }
-func Infoln(msgs ...interface{}) {
-	Info(append(msgs, "\n")...)
+
+func (logger *Logger) Infoln(msgs ...interface{}) {
+	logger.Info(append(msgs, "\n")...)
 }
+
+func (logger *Logger) clear() {
+	logger.infos = logger.infos[:0]
+	logger.warns = logger.warns[:0]
+	logger.errors = logger.errors[:0]
+}
+
+func (logger *Logger) flush() {
+	fmt.Println(logger.infos)
+	fmt.Println(logger.warns)
+	fmt.Println(logger.errors)
+	logger.clear()
+}
+
+var logger = new(Logger)

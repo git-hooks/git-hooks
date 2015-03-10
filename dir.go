@@ -132,7 +132,6 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 			}
 		}
 	}
-	debug("%s scope hooks %s", scope, hooks)
 
 	//
 	// exclude
@@ -143,11 +142,10 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 		if err == nil {
 			var excludes interface{}
 			json.Unmarshal(file, &excludes)
-			debug("excludes %s", excludes)
 
 			wrapper := make(map[string]interface{})
 			// repoid will be empty string if not in a git repo or don't have any commit yet
-			repoid, _ := gitExec("rev-list --max-parents=0 HEAD")
+			repoid, _ := gitExec(GIT["FirstCommit"])
 
 			if scope == "user" {
 				wrapper[repoid] = hooks
@@ -176,7 +174,6 @@ func listHooksInDir(scope, dirname string) (hooks map[string][]string, err error
 			}
 		}
 	}
-	debug("%s scope hooks %s after exclusion", scope, hooks)
 
 	return hooks, nil
 }
@@ -191,5 +188,23 @@ func listHooksInConfig(config string) (hooks map[string]map[string][]string, err
 	}
 
 	json.Unmarshal(file, &hooks)
+	return
+}
+
+// Find contrib directory
+func getContribDir() (contrib string) {
+	contrib, err := gitExec("config --get hooks.contrib")
+	isExist, _ := exists(contrib)
+	if err != nil || !isExist {
+		// default to use ~/.githooks-contrib
+		home, err := homedir.Dir()
+		if err != nil {
+			// fallback
+			home = "~"
+		}
+		contrib = filepath.Join(home, "."+CONTRIB_DIRNAME)
+	} else {
+		contrib = filepath.Join(contrib, CONTRIB_DIRNAME)
+	}
 	return
 }

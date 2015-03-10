@@ -70,8 +70,6 @@ func exists(path string) (bool, error) {
 // Download file from url.
 // Downloaded file stored in temporary directory
 func downloadFromUrl(url string) (fileName string, err error) {
-	debug("Downloading %s", url)
-
 	file, err := ioutil.TempFile(os.TempDir(), NAME)
 	if err != nil {
 		return
@@ -86,13 +84,11 @@ func downloadFromUrl(url string) (fileName string, err error) {
 	}
 	defer response.Body.Close()
 
-	n, err := io.Copy(file, response.Body)
+	_, err = io.Copy(file, response.Body)
 	if err != nil {
 		return
 	}
 
-	debug("Download success")
-	debug("%n bytes downloaded.", n)
 	return
 }
 
@@ -132,6 +128,36 @@ func extract(fileName string) (tmpFileName string, err error) {
 				return tmpFileName, err
 			}
 		}
+	}
+	return
+}
+
+func installBinary(src string) (err error) {
+	dest, err := absExePath(os.Args[0])
+	if err != nil {
+		return
+	}
+
+	out, err := os.Create(dest)
+	if err != nil {
+		return
+	}
+	defer out.Close()
+
+	err = out.Chmod(0755)
+	if err != nil {
+		return
+	}
+
+	in, err := os.Open(src)
+	if err != nil {
+		return
+	}
+	defer in.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return
 	}
 	return
 }

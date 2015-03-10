@@ -1,5 +1,6 @@
 test:
-	go test -v ./...
+	go install github.com/git-hooks/git-hooks
+	ENV=test go test -v ./...
 
 clean:
 	rm -rf build/*
