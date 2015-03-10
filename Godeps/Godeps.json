@@ -33,11 +33,6 @@
 			"Rev": "d6577e08ec30538639ac0ea38b562b6f250e9055"
 		},
 		{
-			"ImportPath": "github.com/tj/go-debug",
-			"Comment": "v2.0.0",
-			"Rev": "ff4a55a20a86994118644bbddc6a216da193cc13"
-		},
-		{
 			"ImportPath": "github.com/wsxiaoys/terminal/color",
 			"Rev": "9dcaf1d63119a8ac00eef82270eaef08b6aa2328"
 		}

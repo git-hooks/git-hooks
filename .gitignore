@@ -4,3 +4,5 @@ Godeps/Readme
 
 Vagrantfile
 .vagrant
+
+fixtures/git-hooks/*
