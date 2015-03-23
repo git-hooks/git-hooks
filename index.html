@@ -27,18 +27,24 @@
         </ul>
       </header>
       <section>
-        <p>git-hooks is at a stage of able to manage client-side hooks, it will support server-side hooks future.</p>
+        <p>git-hooks is currently at the stage of managing client-side hooks. It will support server-side hooks future.</p>
 
-<p>git-hooks is a fork of <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a>, and <a href="http://benjamin-meyer.blogspot.jp/2010/06/managing-project-user-and-global-git.html">managing-project-user-and-global-git.html</a> tells much of what git-hooks pretend to do. Through, I will explain it with the new feature comes with git-hooks.</p>
+<p>git-hooks is a fork of <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a>. The article “<a href="http://benjamin-meyer.blogspot.jp/2010/06/managing-project-user-and-global-git.html">Managing Project, User, and Global git hooks</a>” explains much of the purpose of using git-hooks. </p>
+
+<p>Below, I will explain git-hooks as well as the new features in this fork.</p>
 
 <h2>
 <a id="terminology" class="anchor" href="#terminology" aria-hidden="true"><span class="octicon octicon-link"></span></a>Terminology</h2>
 
 <ul>
-<li>git-hooks: The tool created by this repo</li>
-<li>trigger: Hook type such as pre-commit and commit-msg</li>
-<li>hook: Specific hook</li>
-<li>community hook: common used hook. In the source code of <code>git-hooks</code>, it also referred as <code>contrib</code> hook.</li>
+<li>
+<strong>git-hooks:</strong> The tool created by this repo</li>
+<li>
+<strong>trigger:</strong> Hook type (such as <code>pre-commit</code> and <code>commit-msg</code>)</li>
+<li>
+<strong>hook:</strong> Specific hook</li>
+<li>
+<strong>community hook:</strong> a commonly used hook. Also referred to as <code>contrib</code> hooks in the source code.</li>
 </ul>
 
 <h2>
@@ -53,13 +59,21 @@
 <h2>
 <a id="scope" class="anchor" href="#scope" aria-hidden="true"><span class="octicon octicon-link"></span></a>Scope</h2>
 
-<p>git-hooks try to reduce hooks copy and symbolic link by properly manage them.</p>
+<p>git-hooks tries to reduce hook copies by using symbolic links to manage them.</p>
 
-<p>Take pre-commit hook as an example, when git triggers pre-commit, git-hooks route the execution to <code>githooks</code> directory under the repo directory, <code>~/.githooks</code> directory under home directory and directory configured by <code>git config --set --system hooks.global</code>.</p>
+<p>Take <code>pre-commit</code> hook as an example. When git triggers <code>pre-commit</code>, git-hooks routes the execution to:</p>
 
-<p>These three directories are called <code>project</code> scope, <code>user</code> scope and <code>global</code> scope.</p>
+<ol>
+<li>
+<code>githooks</code> directory under the repo directory,</li>
+<li>
+<code>~/.githooks</code> directory under home directory, and </li>
+<li>the directory configured by <code>git config --set --system hooks.global</code>.</li>
+</ol>
 
-<p><code>project</code> scope hooks reside under repo directory, example layout is</p>
+<p>These three directories are called <code>project</code> scope, <code>user</code> scope, and <code>global</code> scope.</p>
+
+<p><code>project</code> scope hooks reside under repo directory. Here’s an example layout:</p>
 
 <pre><code>some-project
 └── githooks
@@ -71,11 +85,11 @@
         └── check2
 </code></pre>
 
-<p>When triggers pre-commit, all hooks under <code>githooks/pre-commit</code> will be executed.</p>
+<p>When git triggers <code>pre-commit</code>, all hooks under <code>githooks/pre-commit</code> will be executed.</p>
 
-<p>By <code>project</code> scope, we can add project related hooks into version control and separate them into multi files.</p>
+<p>By <code>project</code> scope, we can add project-related hooks into version control, and separate them into multiple files.</p>
 
-<p><code>user</code> scope hooks reside under home directory with the name of <code>.githooks</code>, the same directory structure as <code>project</code> scope hooks. It allow you to setup personal hooks for all your projects.</p>
+<p><code>user</code> hooks reside in the user’s home directory under the name <code>.githooks</code>.  It contains the same directory structure as <code>project</code> hooks. With user hooks, you can setup personal hooks for all your projects.</p>
 
 <pre><code>home
 └── someuser
@@ -88,7 +102,7 @@
             └── check2
 </code></pre>
 
-<p><code>global</code> scope hooks is configured via <code>hooks.global</code> entry in git system wide configuration file. When configured, it is possible for multi user in the same machine share the same hooks.</p>
+<p><code>global</code> scope hooks is configured via <code>hooks.global</code> entry in git's system-wide configuration. It allows multiple users on the same machine to share hooks.</p>
 
 <pre><code>usr
 └── local
@@ -102,15 +116,17 @@
                 └── check2
 </code></pre>
 
-<p>And in git system configuration file (maybe /etc/gitconfig or /usr/local/etc/gitconfig, use <code>git config --system --set hooks.global</code> to setup)</p>
+<p>Git's system configuration is usually found in <code>/etc/gitconfig</code> or <code>/usr/local/etc/gitconfig</code>.</p>
+
+<p>Use <code>git config --system --set hooks.global</code> to setup your global hooks directory.</p>
 
 <pre><code>[hooks]
     global = /usr/local/share/githooks
 </code></pre>
 
-<p>Wait a minute, what if I want to have a hook for a particular project and particular user. It can't be added in version control and can't be added into <code>user</code> scope directory. The solution is <code>semi</code> scope.</p>
+<p>Wait a minute.... What if I want to have a hook for a particular project <em>and</em> particular user? It can't be added in version control, or into <code>user</code> scope directory. </p>
 
-<p><code>semi</code> scope actually reside inside <code>project</code> scope,</p>
+<p>The solution is <code>semi</code> scope. <code>semi</code> scope actually reside inside <code>project</code> scope,</p>
 
 <pre><code>some-project
 └── githooks
@@ -126,30 +142,34 @@
         └── check2
 </code></pre>
 
-<p>Actually when git triggers pre-commit, all hooks under <code>githooks/pre-commit</code> <strong>and</strong> <code>git-hooks/_pre-commit</code> will be executed.</p>
+<p>Now, when git triggers <code>pre-commit</code>, all hooks under <code>githooks/pre-commit</code> <strong>and</strong> <code>git-hooks/_pre-commit</code> will be executed.</p>
 
-<p>In order to setup hook as user related, <code>.gitignore</code> should be written as</p>
+<p>In order to setup hooks as user-related, <code>.gitignore</code> should be written as</p>
 
 <pre><code>_*
 </code></pre>
 
 <h2>
-<a id="community-hook" class="anchor" href="#community-hook" aria-hidden="true"><span class="octicon octicon-link"></span></a>Community hook</h2>
+<a id="community-hooks" class="anchor" href="#community-hooks" aria-hidden="true"><span class="octicon octicon-link"></span></a>Community Hooks</h2>
 
-<p>git-hooks differ from <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a> by enabling community hooks.</p>
+<p>This is where git-hooks differs from <a href="https://github.com/icefox/git-hooks">icefox/git-hooks</a>; it adds the feature of <strong>community hooks</strong>.</p>
 
-<p>Take pre-commit and <code>project</code> scope hooks as an example, when git triggers pre-commit, besides from scanning <code>githooks</code>, git-hooks also read <code>githooks.json</code>, example <code>githooks.json</code> is</p>
+<p>Let’s look at the <code>pre-commit</code> hook in <code>project</code> scope. When git triggers <code>pre-commit</code>, besides scanning <code>githooks</code>, git-hooks also read <code>githooks.json</code>. </p>
+
+<p>For this example, the contents of <code>githooks.json</code> are:</p>
 
 <div class="highlight highlight-javascript"><pre>{
-    <span class="pl-s1"><span class="pl-pds">"</span>pre-commit<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
-        <span class="pl-s1"><span class="pl-pds">"</span>github.com/git-hooks/contrib<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
-            <span class="pl-s1"><span class="pl-pds">"</span>bash_syntax<span class="pl-pds">"</span></span>,
-            <span class="pl-s1"><span class="pl-pds">"</span>jshint<span class="pl-pds">"</span></span>
+    <span class="pl-s"><span class="pl-pds">"</span>pre-commit<span class="pl-pds">"</span></span><span class="pl-k">:</span> {
+        <span class="pl-s"><span class="pl-pds">"</span>github.com/git-hooks/contrib<span class="pl-pds">"</span></span><span class="pl-k">:</span> [
+            <span class="pl-s"><span class="pl-pds">"</span>bashlint<span class="pl-pds">"</span></span>,
+            <span class="pl-s"><span class="pl-pds">"</span>jshint<span class="pl-pds">"</span></span>
         ]
     }
 }</pre></div>
 
-<p>Hooks under <code>"pre-commit"</code> field will be executed, it is organized as git repo, the repo will be clone into <code>~/.githooks-contrib</code> directory under your home directory if it's not yet exists.</p>
+<p>In the JSON, hooks under the <code>"pre-commit"</code> field will be executed. </p>
+
+<p>It’s organized as another git repository. The repository will be cloned into the <code>~/.githooks-contrib</code> directory. (It will be created if it doesn't exist.)</p>
 
 <p>See <a href="https://github.com/git-hooks/git-hooks/wiki/Community-hooks">Community hooks</a> for more info.</p>
 
