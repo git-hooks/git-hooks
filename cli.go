@@ -214,13 +214,13 @@ func update() {
 	logger.Infoln("Latest version is " + version)
 
 	// compare version
-	current, err := semver.New(VERSION[1:])
+	current, err := semver.Make(VERSION[1:])
 	if err != nil {
 		logger.Errorln("Semver parse error ", err)
 		return
 	}
 
-	latest, err := semver.New(version[1:])
+	latest, err := semver.Make(version[1:])
 	if err != nil {
 		logger.Errorln("Semver parse error ", err)
 		return
