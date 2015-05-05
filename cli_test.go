@@ -255,11 +255,7 @@ func TestIdentity(t *testing.T) {
 		git add a;
 		git commit -m "test";
 		`)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
 		err := cmd.Run()
-		fmt.Println(err)
-		fmt.Println(logger.infos, logger.errors)
 		assert.Nil(t, err)
 
 		identity()
