@@ -39,7 +39,11 @@ func createDirectory(t *testing.T, dir string, context func(tempdir string)) {
 // Create temporary git repo
 func createGitRepo(t *testing.T, context func(tempdir string)) {
 	createDirectory(t, filepath.Join("fixtures", "repos"), func(tempdir string) {
-		cmd := exec.Command("git", "init")
+		cmd := exec.Command("bash", "-c", `
+		git init;
+		git config user.email "zhongchiyu@gmail.com";
+		git config user.name "CatTail";
+		`)
 		err := cmd.Run()
 		assert.Nil(t, err)
 
@@ -246,7 +250,11 @@ func TestIdentity(t *testing.T) {
 	})
 
 	createGitRepo(t, func(tempdir string) {
-		cmd := exec.Command("bash", "-c", "touch a;git add a;git commit -m 'test';")
+		cmd := exec.Command("bash", "-c", `
+		touch a;
+		git add a;
+		git commit -m "test";
+		`)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()
