@@ -7,7 +7,7 @@ Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks), with ext
 
 ## Install
 
-[Download](https://github.com/git-hooks/git-hooks/releases) tarball, extract it and place it in your `PATH`
+[Download](https://github.com/git-hooks/git-hooks/releases) tarball, extract, place it in your `PATH`, and rename it as `git-hooks`
 
 If you already installed `git-hooks`, update it by `git hooks update`
 
