@@ -14,11 +14,15 @@ If you already installed `git-hooks`, update it by `git hooks update`
 
 Or manually:
 
-    git clone git@github.com:git-hooks/git-hooks.git
-    # install godep and restore deps
-    make get
-    # install binary
-    go install
+```bash
+cd $GOPATH/src
+git clone git@github.com:git-hooks/git-hooks.git
+cd git-hooks/
+# install godep and restore deps
+make get
+# install binary
+go install
+```
 
 ## Usage
 
