@@ -11,8 +11,7 @@ Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks), with ext
 
 If you already installed `git-hooks`, update it by `git hooks update`
 
-
-Or manually:
+## Manual install
 
 ```bash
 cd $GOPATH/src
