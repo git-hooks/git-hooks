@@ -383,11 +383,11 @@ func runHook(hook string, args ...string) (status int, err error) {
 	// Will run a shell script with sh.exe include in Git for Windows
 	if runtime.GOOS == "windows" {
 		windowsCmd := "cmd"
-		fmt.Println("windowsCmd is", windowsCmd)
+		//fmt.Println("windowsCmd is", windowsCmd)
 		cmdArgs := []string {"/C","sh.exe", hook}
-		fmt.Println("cmdArgs is", cmdArgs)
+		//fmt.Println("cmdArgs is", cmdArgs)
 		windowsArgs := append(cmdArgs,args...)
-		fmt.Println("windowsArgs is", windowsArgs)
+		//fmt.Println("windowsArgs is", windowsArgs)
 		cmd = exec.Command(windowsCmd, windowsArgs...)
 	} else {
 		cmd = exec.Command(hook, args...)
