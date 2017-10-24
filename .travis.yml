@@ -4,4 +4,4 @@ go:
 git:
     depth: 10000
 install: make get
-script: make test
+script: go test ./...
