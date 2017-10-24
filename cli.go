@@ -379,7 +379,20 @@ func runConfigHooks(configs map[string]string, contrib string, current string, a
 // Execute specific hook with arguments
 // Return error message as out if error occured
 func runHook(hook string, args ...string) (status int, err error) {
-	cmd := exec.Command(hook, args...)
+	var cmd *exec.Cmd
+	// Will run a shell script with sh.exe include in Git for Windows
+	if runtime.GOOS == "windows" {
+		windowsCmd := "cmd"
+		fmt.Println("windowsCmd is", windowsCmd)
+		cmdArgs := []string {"/C","sh.exe", hook}
+		fmt.Println("cmdArgs is", cmdArgs)
+		windowsArgs := append(cmdArgs,args...)
+		fmt.Println("windowsArgs is", windowsArgs)
+		cmd = exec.Command(windowsCmd, windowsArgs...)
+	} else {
+		cmd = exec.Command(hook, args...)
+	}
+	
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
