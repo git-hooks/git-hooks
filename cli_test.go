@@ -264,5 +264,22 @@ func TestIdentity(t *testing.T) {
 	})
 }
 
+func TestProtocol(t *testing.T) {
+	gitUrl := "https://my.git.repository.com/org/repo"
+	noProtocol, noProtocolNoUser := findProtocol(gitUrl)
+	assert.True(t, noProtocolNoUser == "my.git.repository.com/org/repo")
+	assert.True(t, noProtocol == "https://my.git.repository.com/org/repo")
+
+	gitUrl = "my.git.repository.com/org/repo"
+	noProtocol, noProtocolNoUser = findProtocol(gitUrl)
+	assert.True(t, noProtocolNoUser == "my.git.repository.com/org/repo")
+	assert.True(t, noProtocol == "https://my.git.repository.com/org/repo")
+
+	gitUrl = "ssh://git@my.git.repository.com:org/repo"
+	noProtocol, noProtocolNoUser = findProtocol(gitUrl)
+	assert.True(t, noProtocolNoUser == "my.git.repository.com/org/repo")
+	assert.True(t, noProtocol == "git@my.git.repository.com:org/repo")
+}
+
 func TestRun(t *testing.T) {
 }
