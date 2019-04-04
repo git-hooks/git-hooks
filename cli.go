@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 	"syscall"
+	"regexp"
 )
 
 func main() {
@@ -333,10 +334,11 @@ func runConfigHooks(configs map[string]string, contrib string, current string, a
 			}
 
 			for repoName, hooks := range repo {
+				fullGitAddress, strippedGitAddress := findProtocol(repoName)
 				// check if repo exist in local file system
-				isExist, _ := exists(filepath.Join(contrib, repoName))
+				isExist, _ := exists(filepath.Join(contrib, strippedGitAddress))
 				if !isExist {
-					cmd := fmt.Sprintf("clone https://%s %s", repoName, filepath.Join(contrib, repoName))
+					cmd := fmt.Sprintf("clone %s %s", fullGitAddress, filepath.Join(contrib, strippedGitAddress))
 					logger.Infoln(cmd)
 					_, err := gitExec(cmd)
 					if err != nil {
@@ -348,7 +350,7 @@ func runConfigHooks(configs map[string]string, contrib string, current string, a
 				for index := 0; index < len(hooks); index++ {
 					hook := hooks[index]
 
-					status, err := runHook(filepath.Join(contrib, repoName, hook), args...)
+					status, err := runHook(filepath.Join(contrib, strippedGitAddress, hook), args...)
 					if err == nil {
 						// skip update if everything ok
 						continue
@@ -360,7 +362,7 @@ func runConfigHooks(configs map[string]string, contrib string, current string, a
 						logger.Infoln("Updating contrib hooks")
 						updated = true
 
-						_, err := gitExecWithDir(filepath.Join(contrib, repoName), "pull origin master")
+						_, err := gitExecWithDir(filepath.Join(contrib, strippedGitAddress), "pull origin master")
 						if err == nil {
 							// try again
 							index--
@@ -413,4 +415,24 @@ func installInto(dir string, template string) {
 		f.Sync()
 		f.Chmod(0755)
 	}
+}
+
+func findProtocol(input string) (string, string) {
+	// check for ssh
+	protocol := regexp.MustCompile("^ssh://([a-zA-Z_-]+@([a-zA-Z0-9.-]+):(.*))")
+	match := protocol.MatchString(input)
+	if match {
+		noProtocolNoUser := protocol.ReplaceAllString(input, "$2/$3")
+		noProtocol := protocol.ReplaceAllString(input, "$1")
+		return noProtocol, noProtocolNoUser
+	}
+	// check for http
+	protocol = regexp.MustCompile("^http[s]?://(.*)")
+	match = protocol.MatchString(input)
+	if match {
+		noProtocol := protocol.ReplaceAllString(input, "$1")
+		return input, noProtocol
+	}
+	// no protocol
+	return fmt.Sprintf("https://%s", input), input
 }
