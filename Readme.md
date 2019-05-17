@@ -27,4 +27,4 @@ go install
 
 See [Get Started](https://github.com/git-hooks/git-hooks/wiki/Get-Started)
 
-Fow more info, see [wiki](https://github.com/git-hooks/git-hooks/wiki)
+For more info, see [wiki](https://github.com/git-hooks/git-hooks/wiki)
