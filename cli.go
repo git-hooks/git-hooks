@@ -1,19 +1,21 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"github.com/blang/semver"
-	"github.com/codegangsta/cli"
 	"github.com/google/go-github/github"
 	"github.com/mitchellh/go-homedir"
+	"github.com/urfave/cli"
+
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
-	"regexp"
 )
 
 func main() {
@@ -59,6 +61,7 @@ func main() {
 
 				client := github.NewClient(nil)
 				releases, _, _ := client.Repositories.ListReleases(
+					context.Background(),
 					"git-hooks", "git-hooks", &github.ListOptions{})
 				update(releases)
 			},
@@ -205,7 +208,7 @@ func uninstallGlobal() {
 
 // Check latest version of git-hooks by github release
 // If there are new version of git-hooks, download and replace the current one
-func update(releases []github.RepositoryRelease) {
+func update(releases []*github.RepositoryRelease) {
 	release := releases[0]
 	version := *release.TagName
 	logger.Infoln("Current version is " + VERSION + ", latest version is " + version)
@@ -223,7 +226,7 @@ func update(releases []github.RepositoryRelease) {
 	}
 
 	// latest version
-	if current.GTE(latest) {
+	if current.GTE(*latest) {
 		logger.Infoln(MESSAGES["UpdateToDate"])
 		return
 	}

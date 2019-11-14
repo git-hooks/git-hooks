@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"github.com/codegangsta/cli"
 	"github.com/stretchr/testify/assert"
+	"github.com/urfave/cli"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
