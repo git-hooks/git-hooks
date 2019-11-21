@@ -5,6 +5,10 @@
 
 Rewritten from [icefox/git-hooks](https://github.com/icefox/git-hooks), with extra features
 
+## Supported Go versions
+
+git-hooks supports the latest two Go version. (Currently 1.12 and 1.13)
+
 ## Install
 
 [Download](https://github.com/git-hooks/git-hooks/releases) tarball, extract, place it in your `PATH`, and rename it as `git-hooks`
