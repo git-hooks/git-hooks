@@ -1,16 +1,22 @@
+PLATFORMS := darwin/386 darwin/amd64 linux/386 linux/amd64 linux/arm \
+	windows/386 windows/amd64 
+
+temp = $(subst /, ,$@)
+os = $(word 1, $(temp))
+arch = $(word 2, $(temp))
+
+release: $(PLATFORMS)
+
+$(PLATFORMS):
+	GOOS=$(os) GOARCH=$(arch) go build -o 'build/git-hooks_$(os)-$(arch)'
+
 test:
-	go install github.com/git-hooks/git-hooks
 	ENV=test go test -v ./...
+
+build:
+	go build -o build/git-hooks
+
+.PHONY: test build release $(PLATFORMS) clean
 
 clean:
 	rm -rf build/*
-
-build: clean
-	gox -output="build/{{.Dir}}_{{.OS}}_{{.Arch}}"
-	find build -type f | xargs -I_file -- sh -c 'tar czvf _file.tar.gz _file && rm _file'
-
-get:
-	go get github.com/tools/godep
-	godep restore ./...
-
-.PHONY: test clean build get

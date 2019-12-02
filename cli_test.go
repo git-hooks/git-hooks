@@ -207,8 +207,8 @@ func TestUpdate(t *testing.T) {
 	tagName := "v1.1.0"
 	assetName := fmt.Sprintf("git-hooks_%s_%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 
-	releases := []github.RepositoryRelease{
-		github.RepositoryRelease{
+	releases := []*github.RepositoryRelease{
+		&github.RepositoryRelease{
 			TagName: &tagName,
 			Assets: []github.ReleaseAsset{
 				github.ReleaseAsset{
