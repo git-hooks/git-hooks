@@ -4,7 +4,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
-	"github.com/codegangsta/cli"
+	"github.com/urfave/cli"
 	"io"
 	"io/ioutil"
 	"net/http"
