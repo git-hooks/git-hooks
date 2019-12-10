@@ -15,10 +15,18 @@ git-hooks supports the latest two Go version. (Currently 1.12 and 1.13)
 
 If you already installed `git-hooks`, update it by `git hooks update`
 
-## Manual install
+Install with `go get`
 
 ```bash
-cd $GOPATH/src
+$ export GO111MODULE="on"
+$ go get -u github.com/git-hooks/git-hooks
+```
+
+Install with `go install`
+
+```bash
+mkdir -p $GOPATH/src/github.com/git-hooks
+cd $GOPATH/src/github.com/git-hooks
 git clone git@github.com:git-hooks/git-hooks.git
 cd git-hooks/
 # install godep and restore deps
