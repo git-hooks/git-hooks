@@ -15,6 +15,12 @@ git-hooks supports the latest two Go version. (Currently 1.12 and 1.13)
 
 If you already installed `git-hooks`, update it by `git hooks update`
 
+## Install with `go get`
+
+You need to set `GO111MODULE="on"` if you want to use go get.
+
+You can install with `go get -u github.com/git-hooks/git-hooks` if you already have go toolchain installed.
+
 ## Manual install
 
 ```bash
