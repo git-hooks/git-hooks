@@ -35,6 +35,12 @@ make get
 go install
 ```
 
+Install with  Homebrew
+
+```bash
+brew install git-hooks-go
+```
+
 ## Usage
 
 See [Get Started](https://github.com/git-hooks/git-hooks/wiki/Get-Started)
