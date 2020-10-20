@@ -15,6 +15,9 @@ test:
 build:
 	go build -o build/git-hooks
 
+compress: build
+	find build -exec upx {} \;
+
 .PHONY: test build release $(PLATFORMS) clean
 
 clean:
